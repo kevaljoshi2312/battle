@@ -1,0 +1,160 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PlayerController : MonoBehaviour
+{
+    readonly List<UnitSelection> selectedUnits = new List<UnitSelection>();
+
+    void Update()
+    {
+        if (Mouse.current == null || Camera.main == null)
+            return;
+
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            DeselectAll();
+            return;
+        }
+
+        if (!Mouse.current.leftButton.wasPressedThisFrame)
+            return;
+
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+        if (hits.Length == 0)
+            return;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        UnitSelection clickedUnit = FindClosestUnit(hits);
+        if (clickedUnit != null)
+        {
+            HandleUnitClick(clickedUnit);
+            return;
+        }
+
+        if (selectedUnits.Count == 0)
+            return;
+
+        MoveSelectedUnitsTo(hits[0].point);
+    }
+
+    void MoveSelectedUnitsTo(Vector3 destination)
+    {
+        if (selectedUnits.Count == 1)
+        {
+            UnitMovement movement = selectedUnits[0].GetComponent<UnitMovement>();
+            if (movement != null)
+                movement.MoveTo(destination);
+            return;
+        }
+
+        Vector3 groupCenter = Vector3.zero;
+        foreach (UnitSelection unit in selectedUnits)
+            groupCenter += unit.transform.position;
+        groupCenter /= selectedUnits.Count;
+
+        // Keep slot order stable (clockwise around the group) but always lay out
+        // a fresh circle at the destination with fixed spacing between units.
+        List<UnitSelection> orderedUnits = new List<UnitSelection>(selectedUnits);
+        orderedUnits.Sort((a, b) =>
+        {
+            float angleA = Mathf.Atan2(
+                a.transform.position.z - groupCenter.z,
+                a.transform.position.x - groupCenter.x);
+            float angleB = Mathf.Atan2(
+                b.transform.position.z - groupCenter.z,
+                b.transform.position.x - groupCenter.x);
+            return angleA.CompareTo(angleB);
+        });
+
+        const float unitSpacing = 2f;
+        int count = orderedUnits.Count;
+        float radius = unitSpacing / (2f * Mathf.Sin(Mathf.PI / count));
+
+        for (int i = 0; i < count; i++)
+        {
+            UnitSelection unit = orderedUnits[i];
+            UnitMovement movement = unit.GetComponent<UnitMovement>();
+            if (movement == null)
+                continue;
+
+            float angle = (2f * Mathf.PI * i) / count;
+            Vector3 target = destination + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+            target.y = unit.transform.position.y;
+            movement.MoveTo(target);
+        }
+    }
+
+    static UnitSelection FindClosestUnit(RaycastHit[] hits)
+    {
+        UnitSelection closest = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (RaycastHit hit in hits)
+        {
+            UnitSelection unit = hit.collider.GetComponentInParent<UnitSelection>();
+            if (unit == null || hit.distance >= closestDistance)
+                continue;
+
+            UnitTeam team = unit.GetComponent<UnitTeam>();
+            if (team != null && team.Team != Team.Player)
+                continue;
+
+            closest = unit;
+            closestDistance = hit.distance;
+        }
+
+        return closest;
+    }
+
+    void HandleUnitClick(UnitSelection unit)
+    {
+        bool shiftHeld = Keyboard.current != null &&
+            (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+
+        if (shiftHeld)
+        {
+            ToggleUnitInSelection(unit);
+            return;
+        }
+
+        if (selectedUnits.Count == 1 && selectedUnits[0] == unit)
+        {
+            DeselectAll();
+            return;
+        }
+
+        SelectOnly(unit);
+    }
+
+    void ToggleUnitInSelection(UnitSelection unit)
+    {
+        if (unit.IsSelected)
+        {
+            unit.Deselect();
+            selectedUnits.Remove(unit);
+            return;
+        }
+
+        unit.Select();
+        if (!selectedUnits.Contains(unit))
+            selectedUnits.Add(unit);
+    }
+
+    void SelectOnly(UnitSelection unit)
+    {
+        DeselectAll();
+        unit.Select();
+        selectedUnits.Add(unit);
+    }
+
+    void DeselectAll()
+    {
+        foreach (UnitSelection unit in selectedUnits)
+            unit.Deselect();
+
+        selectedUnits.Clear();
+    }
+}

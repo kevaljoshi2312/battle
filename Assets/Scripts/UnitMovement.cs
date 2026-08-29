@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class UnitMovement : MonoBehaviour
 {
@@ -8,24 +7,20 @@ public class UnitMovement : MonoBehaviour
     Vector3 targetPosition;
     bool hasTarget;
 
+    public void MoveTo(Vector3 worldPosition)
+    {
+        targetPosition = worldPosition;
+        targetPosition.y = transform.position.y;
+        hasTarget = true;
+    }
+
+    public void Stop()
+    {
+        hasTarget = false;
+    }
+
     void Update()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            Vector2 mousePosition = Mouse.current.position.ReadValue();
-            Ray ray = Camera.main.ScreenPointToRay(mousePosition);
-
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                if (hit.collider.gameObject == gameObject)
-                    return;
-
-                targetPosition = hit.point;
-                targetPosition.y = transform.position.y;
-                hasTarget = true;
-            }
-        }
-
         if (!hasTarget)
             return;
 

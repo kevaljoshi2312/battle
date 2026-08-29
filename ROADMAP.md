@@ -14,7 +14,10 @@
 - [x] Unity Hub + Unity 6 LTS installed
 - [x] URP project created
 - [x] IDE configured
-- [ ] **Day 1 milestone:** Click ground → one unit moves there (`UnitMovement.cs` + **Battle → Setup Milestone 1** in Unity)
+- [x] **Day 1 milestone:** Click ground → one unit moves there
+- [x] **Milestone 2:** Click soldier to select → click ground to move
+- [ ] **Milestone 3:** Shift+click multiple units → all move together
+- [ ] **Milestone 4:** Red enemies chase and attack blue soldiers (`Battle → Setup Milestone 4` in Unity)
 
 ---
 
@@ -276,10 +279,10 @@ Assets/Scripts/
 
 | # | Milestone | Done when |
 |---|-----------|-----------|
-| 1 | Click-to-move | Capsule follows mouse clicks on the plane |
-| 2 | Selection | Click soldier → highlight → click ground → only selected unit moves |
-| 3 | Multi-select | Shift-click or drag-box → all selected units move |
-| 4 | One enemy | Red unit auto-attacks or chases when in range |
+| 1 | Click-to-move | ✅ Capsule follows mouse clicks on the plane |
+| 2 | Selection | ✅ Click soldier → highlight → click ground → only selected unit moves |
+| 3 | Multi-select | ✅ Shift+click units → click ground → all selected units move |
+| 4 | One enemy | Red units chase and attack; blue units fight back when in range |
 | 5 | Three unit types | Different stats on shared Health + UnitCombat components |
 
 ---
