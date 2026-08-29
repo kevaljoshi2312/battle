@@ -15,6 +15,12 @@ public class Health : MonoBehaviour
         currentHealth = maxHealth;
     }
 
+    public void Configure(int health)
+    {
+        maxHealth = health;
+        currentHealth = health;
+    }
+
     public void TakeDamage(int amount)
     {
         if (!IsAlive || amount <= 0)

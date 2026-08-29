@@ -28,6 +28,12 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        if (combat == null)
+        {
+            movement?.Stop();
+            return;
+        }
+
         Transform targetTransform = currentTarget.transform;
         float stopDistance = combat.AttackRange * stopDistanceFactor;
         float distanceToTarget = HorizontalDistance(transform.position, targetTransform.position);

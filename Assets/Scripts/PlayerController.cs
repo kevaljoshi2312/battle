@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        PruneDestroyedUnits();
+
         if (Mouse.current == null || Camera.main == null)
             return;
 
@@ -37,11 +39,18 @@ public class PlayerController : MonoBehaviour
         if (selectedUnits.Count == 0)
             return;
 
-        MoveSelectedUnitsTo(hits[0].point);
+        if (!TryFindGroundPoint(hits, out Vector3 groundPoint))
+            return;
+
+        MoveSelectedUnitsTo(groundPoint);
     }
 
     void MoveSelectedUnitsTo(Vector3 destination)
     {
+        PruneDestroyedUnits();
+        if (selectedUnits.Count == 0)
+            return;
+
         if (selectedUnits.Count == 1)
         {
             UnitMovement movement = selectedUnits[0].GetComponent<UnitMovement>();
@@ -109,6 +118,26 @@ public class PlayerController : MonoBehaviour
         return closest;
     }
 
+    static bool TryFindGroundPoint(RaycastHit[] hits, out Vector3 point)
+    {
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.GetComponentInParent<Health>() != null)
+                continue;
+
+            point = hit.point;
+            return true;
+        }
+
+        point = default;
+        return false;
+    }
+
+    void PruneDestroyedUnits()
+    {
+        selectedUnits.RemoveAll(unit => unit == null);
+    }
+
     void HandleUnitClick(UnitSelection unit)
     {
         bool shiftHeld = Keyboard.current != null &&
@@ -152,6 +181,8 @@ public class PlayerController : MonoBehaviour
 
     void DeselectAll()
     {
+        PruneDestroyedUnits();
+
         foreach (UnitSelection unit in selectedUnits)
             unit.Deselect();
 

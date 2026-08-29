@@ -91,9 +91,8 @@ public static class Milestone4Setup
         if (health == null)
             health = unit.AddComponent<Health>();
 
-        SerializedObject serializedHealth = new SerializedObject(health);
-        serializedHealth.FindProperty("maxHealth").intValue = maxHealth;
-        serializedHealth.ApplyModifiedPropertiesWithoutUndo();
+        health.Configure(maxHealth);
+        EditorUtility.SetDirty(health);
     }
 
     static void EnsureCombat(GameObject unit, int damage, float attackRange, bool autoAttack)
