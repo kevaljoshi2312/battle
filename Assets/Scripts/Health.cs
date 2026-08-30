@@ -32,6 +32,8 @@ public class Health : MonoBehaviour
         int damageAfterArmor = Mathf.Max(1, amount - armor);
         currentHealth -= damageAfterArmor;
 
+        GetComponent<DamageFlash>()?.Play();
+
         if (currentHealth <= 0)
             Die();
     }

@@ -56,15 +56,7 @@ public static class Milestone1Setup
 
     static void SetupCamera()
     {
-        Camera camera = Camera.main;
-        if (camera == null)
-        {
-            Debug.LogWarning("No Main Camera found in scene.");
-            return;
-        }
-
-        camera.transform.position = new Vector3(0f, 10f, -8f);
-        camera.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
+        BattleSceneSetup.ConfigureMainCamera();
     }
 }
 #endif

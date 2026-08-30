@@ -2,36 +2,25 @@ using UnityEngine;
 
 public class UnitSelection : MonoBehaviour
 {
-    [SerializeField] Color selectedColor = new Color(0.2f, 0.9f, 0.3f);
-
-    Renderer unitRenderer;
-    Color defaultColor;
+    SelectionRing selectionRing;
     bool isSelected;
 
     public bool IsSelected => isSelected;
 
     void Awake()
     {
-        unitRenderer = GetComponent<Renderer>();
-    }
-
-    void Start()
-    {
-        if (unitRenderer != null)
-            defaultColor = unitRenderer.material.color;
+        selectionRing = GetComponent<SelectionRing>();
     }
 
     public void Select()
     {
         isSelected = true;
-        if (unitRenderer != null)
-            unitRenderer.material.color = selectedColor;
+        selectionRing?.Show();
     }
 
     public void Deselect()
     {
         isSelected = false;
-        if (unitRenderer != null)
-            unitRenderer.material.color = defaultColor;
+        selectionRing?.Hide();
     }
 }

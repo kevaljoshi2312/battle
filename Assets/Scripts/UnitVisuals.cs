@@ -18,6 +18,9 @@ public static class UnitVisuals
     public const float HealthBarWidth = 0.5f;
     public const float HealthBarHeight = 0.1f;
 
+    public const float SelectionRingDiameter = 0.65f;
+    public const float SelectionRingHeight = 0.04f;
+
     public const float MoveSpeedScale = 0.5f;
     public const float BaseTurnSpeed = 720f;
     public static float TurnSpeed => BaseTurnSpeed * MoveSpeedScale;

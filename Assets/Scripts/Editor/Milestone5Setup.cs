@@ -104,6 +104,8 @@ public static class Milestone5Setup
         EnsureUnitFacing(unit);
         SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, UnitVisuals.EnemyLineZ));
         EnsureHealthBar(unit);
+        EnsureSelectionRing(unit);
+        EnsureDamageFlash(unit);
         EditorUtility.SetDirty(unitProfile);
     }
 
@@ -141,6 +143,7 @@ public static class Milestone5Setup
         EnsureHealth(enemy, 80);
         EnsureCombat(enemy, damage: 15, attackRange: 2f, autoAttack: false);
         EnsureHealthBar(enemy);
+        EnsureDamageFlash(enemy);
 
         if (enemy.GetComponent<UnitMovement>() == null)
             enemy.AddComponent<UnitMovement>();
@@ -197,6 +200,18 @@ public static class Milestone5Setup
     {
         if (unit.GetComponent<HealthBar>() == null)
             unit.AddComponent<HealthBar>();
+    }
+
+    static void EnsureSelectionRing(GameObject unit)
+    {
+        if (unit.GetComponent<SelectionRing>() == null)
+            unit.AddComponent<SelectionRing>();
+    }
+
+    static void EnsureDamageFlash(GameObject unit)
+    {
+        if (unit.GetComponent<DamageFlash>() == null)
+            unit.AddComponent<DamageFlash>();
     }
 
     static void EnsureUnitFacing(GameObject unit)

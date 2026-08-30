@@ -21,7 +21,7 @@
 - [x] **Milestone 5:** Three unit types (Defender, Attacker, Archer)
 - [x] **Milestone 6:** Tactics (hold position, attack commands, archer targeting)
 - [x] **Milestone 7:** Health bars + win/lose screen
-- [ ] **Milestone 8:** More polish (selection UI, effects, maps)
+- [ ] **Milestone 8:** More polish (selection UI, effects, maps) — selection ring, damage flash, orthographic camera done
 
 ---
 
@@ -296,7 +296,7 @@ Assets/Scripts/
 | 5 | Three unit types | ✅ Defender, Attacker, Archer with distinct HP, armor, damage, range, and speed |
 | 6 | Tactics | ✅ Hold (H), attack-click enemies, archers stop at range, defenders block while holding |
 | 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
-| 8 | More polish | Selection UI, effects, maps |
+| 8 | More polish | Selection ring, damage flash, orthographic camera; maps/effects still open |
 
 ---
 
@@ -313,6 +313,7 @@ Run these from the Unity menu bar after opening `SampleScene`:
 | `Battle → Setup Milestone 5` | Three player unit types: Defender, Attacker, Archer |
 | `Battle → Setup Milestone 6` | Tactics: hold, attack orders, archer range behavior |
 | `Battle → Setup Milestone 7` | Health bars + battle win/lose screen |
+| `Battle → Setup Milestone 8` | Selection rings, damage flash, orthographic camera |
 
 ### Controls (Milestone 6+)
 
@@ -331,4 +332,4 @@ Run these from the Unity menu bar after opening `SampleScene`:
 
 > 🎯 **"I can fight a full battle, see unit health, and get a clear win or lose result."**
 
-Next up: selection UI, visual effects, and map variety.
+Next up: map variety and richer combat effects.
