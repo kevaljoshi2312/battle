@@ -85,8 +85,20 @@ public class UnitCombat : MonoBehaviour
         if (!IsInRange(target.transform))
             return;
 
-        target.TakeDamage(damage);
+        if (UnitVisuals.IsRangedAttack(attackRange))
+            FireProjectile(target);
+        else
+            target.TakeDamage(damage);
+
         nextAttackTime = Time.time + attackCooldown;
+    }
+
+    void FireProjectile(Health target)
+    {
+        Vector3 spawnPosition = transform.position + Vector3.up * UnitVisuals.ArrowSpawnHeight;
+        GameObject arrowObject = new GameObject("Arrow");
+        Arrow arrow = arrowObject.AddComponent<Arrow>();
+        arrow.Launch(spawnPosition, target, damage, UnitVisuals.ArrowSpeed);
     }
 
     Health FindNearestEnemyInRange()

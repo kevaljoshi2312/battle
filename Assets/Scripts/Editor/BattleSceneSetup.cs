@@ -6,7 +6,7 @@ public static class BattleSceneSetup
     public const float CameraHeight = 10f;
     public const float CameraBackOffset = 8f;
     public const float CameraPitch = 45f;
-    public const float OrthographicSize = 7f;
+    public const float OrthographicSize = 5f;
 
     public static void ConfigureMainCamera()
     {

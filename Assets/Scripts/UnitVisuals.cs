@@ -21,6 +21,16 @@ public static class UnitVisuals
     public const float SelectionRingDiameter = 0.65f;
     public const float SelectionRingHeight = 0.04f;
 
+    public const float MeleeAttackRangeMax = 2.5f;
+    public const float ArrowSpeed = 14f;
+    public const float ArrowHitDistance = 0.35f;
+    public const float ArrowSpawnHeight = 0.45f;
+    public const float ArrowTargetHeight = 0.45f;
+    public static readonly Color ArrowColor = new Color(0.85f, 0.65f, 0.2f);
+    public static readonly Vector3 ArrowScale = new Vector3(0.04f, 0.04f, 0.35f);
+
+    public static bool IsRangedAttack(float attackRange) => attackRange > MeleeAttackRangeMax;
+
     public const float MoveSpeedScale = 0.5f;
     public const float BaseTurnSpeed = 720f;
     public static float TurnSpeed => BaseTurnSpeed * MoveSpeedScale;

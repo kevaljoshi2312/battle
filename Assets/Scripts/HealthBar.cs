@@ -23,6 +23,12 @@ public class HealthBar : MonoBehaviour
         BuildBar();
     }
 
+    public void Hide()
+    {
+        if (barRoot != null)
+            barRoot.gameObject.SetActive(false);
+    }
+
     void LateUpdate()
     {
         if (health == null || barRoot == null)

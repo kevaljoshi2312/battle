@@ -44,9 +44,25 @@ public class BattleManager : MonoBehaviour
     void EndBattle(string result)
     {
         battleEnded = true;
+        CleanupDyingUnits();
         Time.timeScale = 0f;
         resultPanel.SetActive(true);
         resultText.text = result;
+    }
+
+    static void CleanupDyingUnits()
+    {
+        foreach (Health health in FindObjectsByType<Health>(FindObjectsSortMode.None))
+        {
+            if (health.IsAlive)
+                continue;
+
+            DeathEffect deathEffect = health.GetComponent<DeathEffect>();
+            if (deathEffect != null)
+                deathEffect.FinishImmediately();
+            else
+                Destroy(health.gameObject);
+        }
     }
 
     public void RestartBattle()

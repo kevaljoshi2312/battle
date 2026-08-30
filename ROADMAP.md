@@ -21,7 +21,9 @@
 - [x] **Milestone 5:** Three unit types (Defender, Attacker, Archer)
 - [x] **Milestone 6:** Tactics (hold position, attack commands, archer targeting)
 - [x] **Milestone 7:** Health bars + win/lose screen
-- [ ] **Milestone 8:** More polish (selection UI, effects, maps) — selection ring, damage flash, orthographic camera done
+- [x] **Milestone 8:** Visual polish — selection ring, damage flash, orthographic camera
+- [x] **Milestone 9:** Combat feel — archer projectiles, death effects *(attack sounds/lunge optional)*
+- [ ] **Milestone 10:** Tactical terrain — obstacles, chokepoints, NavMesh, unfair battle test
 
 ---
 
@@ -238,11 +240,10 @@ Don't obsess over exact numbers yet. Balance comes later.
 
 ### Week 6+ — Make it fun
 
-- Maps
-- Terrain
-- Better AI
-- Effects
-- UI
+- Combat feel (arrows, death, hit feedback)
+- Tactical maps (obstacles, chokepoints, NavMesh)
+- Unfair battle balance test
+- Better AI, sounds, UI
 
 ---
 
@@ -268,6 +269,10 @@ Assets/Scripts/
 ├── PlayerUnitAI.cs       ← Week 5 (tactics) ✅
 ├── HealthBar.cs          ← Week 6+ ✅
 ├── BattleManager.cs      ← Week 6+ ✅
+├── SelectionRing.cs      ← Milestone 8 ✅
+├── DamageFlash.cs        ← Milestone 8 ✅
+├── Arrow.cs              ← Milestone 9 ✅
+├── DeathEffect.cs        ← Milestone 9 ✅
 └── GameManager.cs        ← when needed
 ```
 
@@ -279,9 +284,9 @@ Assets/Scripts/
 
 | Package | Use when |
 |---------|----------|
-| `com.unity.inputsystem` | Cleaner multi-platform input (optional upgrade from legacy Input) |
-| `com.unity.ai.navigation` | NavMesh pathfinding around obstacles (Week 5+) |
-| `com.unity.ugui` | Selection rings, health bars, UI (Week 6+) |
+| `com.unity.inputsystem` | Cleaner multi-platform input (already in use via `PlayerController`) |
+| `com.unity.ai.navigation` | NavMesh pathfinding around obstacles (**Milestone 10**) |
+| `com.unity.ugui` | Health bars, win/lose UI (already in use via `BattleManager`) |
 
 ---
 
@@ -296,7 +301,68 @@ Assets/Scripts/
 | 5 | Three unit types | ✅ Defender, Attacker, Archer with distinct HP, armor, damage, range, and speed |
 | 6 | Tactics | ✅ Hold (H), attack-click enemies, archers stop at range, defenders block while holding |
 | 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
-| 8 | More polish | Selection ring, damage flash, orthographic camera; maps/effects still open |
+| 8 | Visual polish | ✅ Selection ring, damage flash, orthographic camera (`BattleSceneSetup`) |
+| 9 | Combat feel | ✅ Archer projectiles (damage on hit); death tilt/shrink; optional: attack lunge, sounds |
+| 10 | Tactical terrain | Second map, walls/rocks, bridge chokepoint, NavMesh, unfair battle scenario |
+
+**Build order:** 9 before 10. Combat feel is a small, isolated win; terrain needs NavMesh and movement changes.
+
+### Milestone 9 — Combat feel
+
+Archers currently deal instant ranged damage. Make combat readable and satisfying:
+
+```text
+Archer fires
+     ↓
+Arrow travels to target
+     ↓
+Arrow hits
+     ↓
+Damage applied (+ DamageFlash)
+```
+
+Also:
+
+- Death effect: tilt/fall, brief delay, fade out, then `Destroy` (not instant vanish)
+- Optional: attack lunge/punch on melee hit, hit sounds
+
+**Done when:** archer attacks are visible projectiles; units don't pop out of existence on death.
+
+### Milestone 10 — Tactical terrain
+
+This is where positioning starts to matter strategically.
+
+```text
+       🏹 🏹
+     ARCHERS
+
+═══════════
+     🛡️
+   BRIDGE
+═══════════
+
+⚔️ ⚔️ ⚔️ ⚔️ ⚔️
+   ENEMY
+```
+
+Goals:
+
+- Second battlefield layout (`Battle → Setup Milestone 10`)
+- Rocks/walls as obstacles
+- Narrow passage or bridge chokepoint
+- NavMesh baking + `UnitMovement` / `EnemyAI` path around obstacles
+- Defensive hold positions become valuable
+
+**Design validation — unfair battle test:**
+
+| Side | Force |
+|------|-------|
+| Player | ~8 units (e.g. 2 archers back, 3 defenders on bridge) |
+| Enemy | ~15 units attacking through the choke |
+
+> Can a smaller army win through tactics — holding chokepoints, protecting archers, focus fire?
+
+If yes, the core game promise is validated: **a smaller army can win through positioning, not just stats.**
 
 ---
 
@@ -314,6 +380,8 @@ Run these from the Unity menu bar after opening `SampleScene`:
 | `Battle → Setup Milestone 6` | Tactics: hold, attack orders, archer range behavior |
 | `Battle → Setup Milestone 7` | Health bars + battle win/lose screen |
 | `Battle → Setup Milestone 8` | Selection rings, damage flash, orthographic camera |
+| `Battle → Setup Milestone 9` | Archer projectiles, death effects |
+| `Battle → Setup Milestone 10` | *(planned)* Bridge map, obstacles, NavMesh, unfair battle |
 
 ### Controls (Milestone 6+)
 
@@ -330,6 +398,12 @@ Run these from the Unity menu bar after opening `SampleScene`:
 
 ## North star
 
+**Achieved (Milestones 1–8):**
+
 > 🎯 **"I can fight a full battle, see unit health, and get a clear win or lose result."**
 
-Next up: map variety and richer combat effects.
+**Next validation (Milestones 9–10):**
+
+> 🎯 **"A smaller army can win through tactics — holding chokepoints, protecting archers, and choosing targets wisely."**
+
+**Next up:** Milestone 10 — bridge map, obstacles, and NavMesh pathfinding.

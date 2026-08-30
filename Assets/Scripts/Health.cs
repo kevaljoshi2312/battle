@@ -40,6 +40,13 @@ public class Health : MonoBehaviour
 
     void Die()
     {
+        DeathEffect deathEffect = GetComponent<DeathEffect>();
+        if (deathEffect != null)
+        {
+            deathEffect.Play();
+            return;
+        }
+
         Destroy(gameObject);
     }
 }
