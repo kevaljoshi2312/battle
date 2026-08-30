@@ -12,6 +12,13 @@ public class UnitCombat : MonoBehaviour
 
     public float AttackRange => attackRange;
 
+    public void Configure(int damageAmount, float range, bool autoAttack = true)
+    {
+        damage = damageAmount;
+        attackRange = range;
+        autoAttackWhenInRange = autoAttack;
+    }
+
     void Awake()
     {
         unitTeam = GetComponent<UnitTeam>();

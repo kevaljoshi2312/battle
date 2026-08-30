@@ -16,8 +16,10 @@
 - [x] IDE configured
 - [x] **Day 1 milestone:** Click ground → one unit moves there
 - [x] **Milestone 2:** Click soldier to select → click ground to move
-- [ ] **Milestone 3:** Shift+click multiple units → all move together
-- [ ] **Milestone 4:** Red enemies chase and attack blue soldiers (`Battle → Setup Milestone 4` in Unity)
+- [x] **Milestone 3:** Shift+click multiple units → all move together
+- [x] **Milestone 4:** Red enemies chase and attack blue soldiers
+- [x] **Milestone 5:** Three unit types (Defender, Attacker, Archer)
+- [ ] **Milestone 6:** Tactics (hold position, attack commands, archer targeting)
 
 ---
 
@@ -256,8 +258,11 @@ Assets/Scripts/
 ├── Health.cs             ← Week 3
 ├── UnitCombat.cs         ← Week 3
 ├── EnemyAI.cs            ← Week 3
+├── Team.cs               ← Week 3
+├── UnitTeam.cs           ← Week 3
 │
-├── Unit.cs               ← Week 4 (shared stats)
+├── Unit.cs               ← Week 4 (shared stats) ✅
+├── UnitType.cs           ← Week 4
 └── GameManager.cs        ← when needed
 ```
 
@@ -282,61 +287,28 @@ Assets/Scripts/
 | 1 | Click-to-move | ✅ Capsule follows mouse clicks on the plane |
 | 2 | Selection | ✅ Click soldier → highlight → click ground → only selected unit moves |
 | 3 | Multi-select | ✅ Shift+click units → click ground → all selected units move |
-| 4 | One enemy | Red units chase and attack; blue units fight back when in range |
-| 5 | Three unit types | Different stats on shared Health + UnitCombat components |
+| 4 | One enemy | ✅ Red units chase and attack; blue units fight back when in range |
+| 5 | Three unit types | ✅ Defender, Attacker, Archer with distinct HP, armor, damage, range, and speed |
+| 6 | Tactics | Hold position, attack commands, archer targeting |
 
 ---
 
-## Day 1 starter script reference
+## Editor setup menus
 
-`Assets/Scripts/UnitMovement.cs`:
+Run these from the Unity menu bar after opening `SampleScene`:
 
-```csharp
-using UnityEngine;
-
-public class UnitMovement : MonoBehaviour
-{
-    [SerializeField] float moveSpeed = 5f;
-
-    Vector3 targetPosition;
-    bool hasTarget;
-
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                targetPosition = hit.point;
-                hasTarget = true;
-            }
-        }
-
-        if (!hasTarget) return;
-
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            targetPosition,
-            moveSpeed * Time.deltaTime
-        );
-
-        if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
-            hasTarget = false;
-    }
-}
-```
-
-### Common Day 1 pitfalls
-
-1. **Camera not tagged `MainCamera`** — `Camera.main` returns null
-2. **Clicking the capsule** — ray hits the soldier first; expected until selection is added
-3. **Over-engineering** — one script, one unit, one behavior. That's it.
+| Menu | What it sets up |
+|------|-----------------|
+| `Battle → Setup Milestone 1` | Ground, one soldier, camera |
+| `Battle → Setup Milestone 2` | Unit selection + `PlayerController` |
+| `Battle → Setup Milestone 3` | Five soldiers, multi-select |
+| `Battle → Setup Milestone 4` | Combat: teams, health, enemies, AI |
+| `Battle → Setup Milestone 5` | Three player unit types: Defender, Attacker, Archer |
 
 ---
 
 ## North star
 
-> 🎯 **"I can select one soldier and move him around a battlefield."**
+> 🎯 **"I command a squad of Defenders, Attackers, and Archers against red enemies."**
 
-That is the correct starting point for this game.
+Next up: tactics — hold position, attack commands, and archer targeting.

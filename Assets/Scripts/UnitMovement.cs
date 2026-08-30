@@ -4,6 +4,13 @@ public class UnitMovement : MonoBehaviour
 {
     [SerializeField] float moveSpeed = 5f;
 
+    public float MoveSpeed => moveSpeed;
+
+    public void Configure(float speed)
+    {
+        moveSpeed = speed;
+    }
+
     Vector3 targetPosition;
     bool hasTarget;
 

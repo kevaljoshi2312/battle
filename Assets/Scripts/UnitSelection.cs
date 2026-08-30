@@ -13,6 +13,10 @@ public class UnitSelection : MonoBehaviour
     void Awake()
     {
         unitRenderer = GetComponent<Renderer>();
+    }
+
+    void Start()
+    {
         if (unitRenderer != null)
             defaultColor = unitRenderer.material.color;
     }

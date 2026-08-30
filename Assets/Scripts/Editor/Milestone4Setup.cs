@@ -101,11 +101,8 @@ public static class Milestone4Setup
         if (combat == null)
             combat = unit.AddComponent<UnitCombat>();
 
-        SerializedObject serializedCombat = new SerializedObject(combat);
-        serializedCombat.FindProperty("damage").intValue = damage;
-        serializedCombat.FindProperty("attackRange").floatValue = attackRange;
-        serializedCombat.FindProperty("autoAttackWhenInRange").boolValue = autoAttack;
-        serializedCombat.ApplyModifiedPropertiesWithoutUndo();
+        combat.Configure(damage, attackRange, autoAttack);
+        EditorUtility.SetDirty(combat);
     }
 }
 #endif
