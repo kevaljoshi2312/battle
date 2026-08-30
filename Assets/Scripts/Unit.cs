@@ -31,9 +31,9 @@ public class Unit : MonoBehaviour
 
         UnitMovement movement = GetComponent<UnitMovement>();
         if (movement != null)
-            movement.Configure(stats.MoveSpeed);
+            movement.Configure(stats.MoveSpeed * UnitVisuals.MoveSpeedScale);
 
-        transform.localScale = Vector3.one * stats.Scale;
+        transform.localScale = UnitVisuals.CapsuleScale;
 
         Renderer renderer = GetComponent<Renderer>();
         if (renderer == null)
@@ -52,7 +52,6 @@ readonly struct UnitStatBlock
     public int Damage { get; }
     public float AttackRange { get; }
     public float MoveSpeed { get; }
-    public float Scale { get; }
     public Color Color { get; }
     public bool AutoAttack { get; }
 
@@ -62,7 +61,6 @@ readonly struct UnitStatBlock
         int damage,
         float attackRange,
         float moveSpeed,
-        float scale,
         Color color,
         bool autoAttack)
     {
@@ -71,7 +69,6 @@ readonly struct UnitStatBlock
         Damage = damage;
         AttackRange = attackRange;
         MoveSpeed = moveSpeed;
-        Scale = scale;
         Color = color;
         AutoAttack = autoAttack;
     }
@@ -86,7 +83,6 @@ readonly struct UnitStatBlock
                 damage: 11,
                 attackRange: 2f,
                 moveSpeed: 3f,
-                scale: 1.15f,
                 color: new Color(0.1f, 0.3f, 0.85f),
                 autoAttack: true),
             UnitType.Attacker => new UnitStatBlock(
@@ -95,7 +91,6 @@ readonly struct UnitStatBlock
                 damage: 20,
                 attackRange: 2f,
                 moveSpeed: 5f,
-                scale: 1f,
                 color: new Color(0.2f, 0.5f, 1f),
                 autoAttack: true),
             UnitType.Archer => new UnitStatBlock(
@@ -104,10 +99,9 @@ readonly struct UnitStatBlock
                 damage: 14,
                 attackRange: 8f,
                 moveSpeed: 4f,
-                scale: 0.9f,
                 color: new Color(0.3f, 0.85f, 1f),
                 autoAttack: true),
-            _ => new UnitStatBlock(100, 0, 10, 2f, 5f, 1f, Color.blue, true)
+            _ => new UnitStatBlock(100, 0, 10, 2f, 5f, Color.blue, true)
         };
     }
 }

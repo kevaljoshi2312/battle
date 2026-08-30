@@ -40,6 +40,7 @@ public static class Milestone1Setup
         }
 
         soldier.transform.position = new Vector3(0f, 1f, 0f);
+        soldier.transform.localScale = UnitVisuals.CapsuleScale;
 
         Renderer renderer = soldier.GetComponent<Renderer>();
         if (renderer != null)

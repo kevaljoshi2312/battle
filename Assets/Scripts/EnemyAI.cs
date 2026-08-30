@@ -7,6 +7,7 @@ public class EnemyAI : MonoBehaviour
 
     UnitMovement movement;
     UnitCombat combat;
+    UnitFacing facing;
     UnitTeam unitTeam;
     Health currentTarget;
 
@@ -14,6 +15,7 @@ public class EnemyAI : MonoBehaviour
     {
         movement = GetComponent<UnitMovement>();
         combat = GetComponent<UnitCombat>();
+        facing = GetComponent<UnitFacing>();
         unitTeam = GetComponent<UnitTeam>();
     }
 
@@ -35,6 +37,8 @@ public class EnemyAI : MonoBehaviour
         }
 
         Transform targetTransform = currentTarget.transform;
+        facing?.FaceToward(targetTransform.position);
+
         float stopDistance = combat.AttackRange * stopDistanceFactor;
         float distanceToTarget = HorizontalDistance(transform.position, targetTransform.position);
 

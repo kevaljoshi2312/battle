@@ -36,9 +36,9 @@ public static class Milestone4Setup
     {
         Vector3[] spawnPositions =
         {
-            new Vector3(0f, 1f, 8f),
-            new Vector3(-3f, 1f, 10f),
-            new Vector3(3f, 1f, 10f),
+            new Vector3(UnitVisuals.LineX(0, 3), 1f, UnitVisuals.EnemyLineZ),
+            new Vector3(UnitVisuals.LineX(1, 3), 1f, UnitVisuals.EnemyLineZ),
+            new Vector3(UnitVisuals.LineX(2, 3), 1f, UnitVisuals.EnemyLineZ),
         };
 
         for (int i = 0; i < spawnPositions.Length; i++)
@@ -52,6 +52,7 @@ public static class Milestone4Setup
 
         enemy.name = name;
         enemy.transform.position = position;
+        enemy.transform.localScale = UnitVisuals.CapsuleScale;
 
         Renderer renderer = enemy.GetComponent<Renderer>();
         if (renderer != null)

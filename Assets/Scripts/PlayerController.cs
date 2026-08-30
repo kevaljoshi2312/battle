@@ -13,6 +13,12 @@ public class PlayerController : MonoBehaviour
         if (Mouse.current == null || Camera.main == null)
             return;
 
+        if (Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
+        {
+            HoldSelectedUnits();
+            return;
+        }
+
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
             DeselectAll();
@@ -29,7 +35,7 @@ public class PlayerController : MonoBehaviour
 
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-        UnitSelection clickedUnit = FindClosestUnit(hits);
+        UnitSelection clickedUnit = FindClosestPlayerUnit(hits);
         if (clickedUnit != null)
         {
             HandleUnitClick(clickedUnit);
@@ -39,10 +45,41 @@ public class PlayerController : MonoBehaviour
         if (selectedUnits.Count == 0)
             return;
 
+        Health clickedEnemy = FindClosestEnemy(hits);
+        if (clickedEnemy != null)
+        {
+            AttackWithSelectedUnits(clickedEnemy);
+            return;
+        }
+
         if (!TryFindGroundPoint(hits, out Vector3 groundPoint))
             return;
 
         MoveSelectedUnitsTo(groundPoint);
+    }
+
+    void HoldSelectedUnits()
+    {
+        PruneDestroyedUnits();
+
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
+            if (ai != null)
+                ai.HoldPosition();
+        }
+    }
+
+    void AttackWithSelectedUnits(Health target)
+    {
+        PruneDestroyedUnits();
+
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
+            if (ai != null)
+                ai.AttackTarget(target);
+        }
     }
 
     void MoveSelectedUnitsTo(Vector3 destination)
@@ -53,9 +90,7 @@ public class PlayerController : MonoBehaviour
 
         if (selectedUnits.Count == 1)
         {
-            UnitMovement movement = selectedUnits[0].GetComponent<UnitMovement>();
-            if (movement != null)
-                movement.MoveTo(destination);
+            IssueMoveOrder(selectedUnits[0], destination);
             return;
         }
 
@@ -64,8 +99,6 @@ public class PlayerController : MonoBehaviour
             groupCenter += unit.transform.position;
         groupCenter /= selectedUnits.Count;
 
-        // Keep slot order stable (clockwise around the group) but always lay out
-        // a fresh circle at the destination with fixed spacing between units.
         List<UnitSelection> orderedUnits = new List<UnitSelection>(selectedUnits);
         orderedUnits.Sort((a, b) =>
         {
@@ -78,25 +111,35 @@ public class PlayerController : MonoBehaviour
             return angleA.CompareTo(angleB);
         });
 
-        const float unitSpacing = 2f;
+        const float unitSpacing = UnitVisuals.GroupMoveSpacing;
         int count = orderedUnits.Count;
         float radius = unitSpacing / (2f * Mathf.Sin(Mathf.PI / count));
 
         for (int i = 0; i < count; i++)
         {
             UnitSelection unit = orderedUnits[i];
-            UnitMovement movement = unit.GetComponent<UnitMovement>();
-            if (movement == null)
-                continue;
-
             float angle = (2f * Mathf.PI * i) / count;
             Vector3 target = destination + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
             target.y = unit.transform.position.y;
-            movement.MoveTo(target);
+            IssueMoveOrder(unit, target);
         }
     }
 
-    static UnitSelection FindClosestUnit(RaycastHit[] hits)
+    static void IssueMoveOrder(UnitSelection unit, Vector3 destination)
+    {
+        PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
+        if (ai != null)
+        {
+            ai.MoveToPosition(destination);
+            return;
+        }
+
+        UnitMovement movement = unit.GetComponent<UnitMovement>();
+        if (movement != null)
+            movement.MoveTo(destination);
+    }
+
+    static UnitSelection FindClosestPlayerUnit(RaycastHit[] hits)
     {
         UnitSelection closest = null;
         float closestDistance = float.MaxValue;
@@ -112,6 +155,28 @@ public class PlayerController : MonoBehaviour
                 continue;
 
             closest = unit;
+            closestDistance = hit.distance;
+        }
+
+        return closest;
+    }
+
+    static Health FindClosestEnemy(RaycastHit[] hits)
+    {
+        Health closest = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (RaycastHit hit in hits)
+        {
+            Health health = hit.collider.GetComponentInParent<Health>();
+            if (health == null || !health.IsAlive || hit.distance >= closestDistance)
+                continue;
+
+            UnitTeam team = health.GetComponent<UnitTeam>();
+            if (team == null || team.Team != Team.Enemy)
+                continue;
+
+            closest = health;
             closestDistance = hit.distance;
         }
 

@@ -9,11 +9,11 @@ public static class Milestone5Setup
 
     static readonly (string Name, UnitType Type, Vector3 Position)[] PlayerUnits =
     {
-        ("Defender_1", UnitType.Defender, new Vector3(-4f, 1f, 0f)),
-        ("Defender_2", UnitType.Defender, new Vector3(-2f, 1f, 0f)),
-        ("Attacker_1", UnitType.Attacker, new Vector3(0f, 1f, 0f)),
-        ("Attacker_2", UnitType.Attacker, new Vector3(2f, 1f, 0f)),
-        ("Archer_1", UnitType.Archer, new Vector3(4f, 1f, 0f)),
+        ("Defender_1", UnitType.Defender, SpawnPosition(0, 5)),
+        ("Defender_2", UnitType.Defender, SpawnPosition(1, 5)),
+        ("Attacker_1", UnitType.Attacker, SpawnPosition(2, 5)),
+        ("Attacker_2", UnitType.Attacker, SpawnPosition(3, 5)),
+        ("Archer_1", UnitType.Archer, SpawnPosition(4, 5)),
     };
 
     [MenuItem(MenuPath)]
@@ -27,6 +27,11 @@ public static class Milestone5Setup
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("Milestone 5 ready! Defenders (tanky), Attackers (melee DPS), Archers (long range).");
+    }
+
+    static Vector3 SpawnPosition(int index, int count)
+    {
+        return new Vector3(UnitVisuals.LineX(index, count), 1f, UnitVisuals.PlayerLineZ);
     }
 
     static void EnsurePlayerController()
@@ -70,6 +75,7 @@ public static class Milestone5Setup
 
         unit.name = name;
         unit.transform.position = position;
+        unit.transform.localScale = UnitVisuals.CapsuleScale;
 
         if (unit.GetComponent<UnitSelection>() == null)
             unit.AddComponent<UnitSelection>();
@@ -86,12 +92,18 @@ public static class Milestone5Setup
         if (unit.GetComponent<UnitTeam>() == null)
             unit.AddComponent<UnitTeam>();
 
+        if (unit.GetComponent<PlayerUnitAI>() == null)
+            unit.AddComponent<PlayerUnitAI>();
+
         Unit unitProfile = unit.GetComponent<Unit>();
         if (unitProfile == null)
             unitProfile = unit.AddComponent<Unit>();
 
         EnsureTeam(unit, Team.Player);
         unitProfile.Configure(type);
+        EnsureUnitFacing(unit);
+        SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, UnitVisuals.EnemyLineZ));
+        EnsureHealthBar(unit);
         EditorUtility.SetDirty(unitProfile);
     }
 
@@ -99,9 +111,9 @@ public static class Milestone5Setup
     {
         Vector3[] spawnPositions =
         {
-            new Vector3(0f, 1f, 8f),
-            new Vector3(-3f, 1f, 10f),
-            new Vector3(3f, 1f, 10f),
+            new Vector3(UnitVisuals.LineX(0, 3), 1f, UnitVisuals.EnemyLineZ),
+            new Vector3(UnitVisuals.LineX(1, 3), 1f, UnitVisuals.EnemyLineZ),
+            new Vector3(UnitVisuals.LineX(2, 3), 1f, UnitVisuals.EnemyLineZ),
         };
 
         for (int i = 0; i < spawnPositions.Length; i++)
@@ -115,6 +127,7 @@ public static class Milestone5Setup
 
         enemy.name = name;
         enemy.transform.position = position;
+        enemy.transform.localScale = UnitVisuals.CapsuleScale;
 
         Renderer renderer = enemy.GetComponent<Renderer>();
         if (renderer != null)
@@ -127,12 +140,16 @@ public static class Milestone5Setup
         EnsureTeam(enemy, Team.Enemy);
         EnsureHealth(enemy, 80);
         EnsureCombat(enemy, damage: 15, attackRange: 2f, autoAttack: false);
+        EnsureHealthBar(enemy);
 
         if (enemy.GetComponent<UnitMovement>() == null)
             enemy.AddComponent<UnitMovement>();
 
         if (enemy.GetComponent<EnemyAI>() == null)
             enemy.AddComponent<EnemyAI>();
+
+        EnsureUnitFacing(enemy);
+        SnapFacingToward(enemy, new Vector3(enemy.transform.position.x, 0f, UnitVisuals.PlayerLineZ));
 
         UnitSelection selection = enemy.GetComponent<UnitSelection>();
         if (selection != null)
@@ -141,6 +158,10 @@ public static class Milestone5Setup
         Unit unitProfile = enemy.GetComponent<Unit>();
         if (unitProfile != null)
             Object.DestroyImmediate(unitProfile);
+
+        PlayerUnitAI playerAi = enemy.GetComponent<PlayerUnitAI>();
+        if (playerAi != null)
+            Object.DestroyImmediate(playerAi);
     }
 
     static void EnsureTeam(GameObject unit, Team team)
@@ -170,6 +191,25 @@ public static class Milestone5Setup
 
         combat.Configure(damage, attackRange, autoAttack);
         EditorUtility.SetDirty(combat);
+    }
+
+    static void EnsureHealthBar(GameObject unit)
+    {
+        if (unit.GetComponent<HealthBar>() == null)
+            unit.AddComponent<HealthBar>();
+    }
+
+    static void EnsureUnitFacing(GameObject unit)
+    {
+        if (unit.GetComponent<UnitFacing>() == null)
+            unit.AddComponent<UnitFacing>();
+    }
+
+    static void SnapFacingToward(GameObject unit, Vector3 worldPoint)
+    {
+        UnitFacing facing = unit.GetComponent<UnitFacing>();
+        if (facing != null)
+            facing.SnapToward(worldPoint);
     }
 }
 #endif

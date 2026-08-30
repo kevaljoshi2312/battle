@@ -9,6 +9,8 @@ public class UnitCombat : MonoBehaviour
 
     float nextAttackTime;
     UnitTeam unitTeam;
+    UnitFacing facing;
+    Health focusTarget;
 
     public float AttackRange => attackRange;
 
@@ -19,19 +21,47 @@ public class UnitCombat : MonoBehaviour
         autoAttackWhenInRange = autoAttack;
     }
 
+    public void SetAttackTarget(Health target)
+    {
+        focusTarget = target;
+    }
+
+    public void ClearAttackTarget()
+    {
+        focusTarget = null;
+    }
+
     void Awake()
     {
+        attackCooldown = UnitVisuals.AttackCooldown;
         unitTeam = GetComponent<UnitTeam>();
+        facing = GetComponent<UnitFacing>();
     }
 
     void Update()
     {
-        if (!autoAttackWhenInRange)
+        Health target = GetAttackTarget();
+        if (target == null)
             return;
 
-        Health target = FindNearestEnemyInRange();
-        if (target != null)
-            TryAttack(target);
+        facing?.FaceToward(target.transform.position);
+        TryAttack(target);
+    }
+
+    Health GetAttackTarget()
+    {
+        if (focusTarget != null)
+        {
+            if (!focusTarget.IsAlive)
+                focusTarget = null;
+            else
+                return focusTarget;
+        }
+
+        if (!autoAttackWhenInRange)
+            return null;
+
+        return FindNearestEnemyInRange();
     }
 
     public bool IsInRange(Transform target)

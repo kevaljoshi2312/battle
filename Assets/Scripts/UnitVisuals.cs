@@ -1,0 +1,37 @@
+using UnityEngine;
+
+public static class UnitVisuals
+{
+    public const float CapsuleHeight = 0.8f;
+    public const float CapsuleRadius = 0.5f;
+
+    // Gap between units at battle start and when moving as a group.
+    public const float SpawnSpacing = 1f;
+    public const float GroupMoveSpacing = 1f;
+
+    // Team lines along Z (ground plane center is 0).
+    public const float PlayerLineZ = -2f;
+    public const float EnemyLineZ = 3f;
+
+    public static Vector3 CapsuleScale => new Vector3(CapsuleRadius, CapsuleHeight, CapsuleRadius);
+
+    public const float HealthBarWidth = 0.5f;
+    public const float HealthBarHeight = 0.1f;
+
+    public const float MoveSpeedScale = 0.5f;
+    public const float BaseTurnSpeed = 720f;
+    public static float TurnSpeed => BaseTurnSpeed * MoveSpeedScale;
+
+    public const float BaseAttackCooldown = 1f;
+    public const float AttackCooldownScale = 2f;
+    public static float AttackCooldown => BaseAttackCooldown * AttackCooldownScale;
+
+    public const float BaseEnemyMoveSpeed = 5f;
+    public static float EnemyMoveSpeed => BaseEnemyMoveSpeed * MoveSpeedScale;
+
+    public static float LineX(int index, int count)
+    {
+        float centerOffset = (count - 1) * 0.5f;
+        return (index - centerOffset) * SpawnSpacing;
+    }
+}

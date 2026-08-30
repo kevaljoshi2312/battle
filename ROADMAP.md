@@ -19,7 +19,9 @@
 - [x] **Milestone 3:** Shift+click multiple units → all move together
 - [x] **Milestone 4:** Red enemies chase and attack blue soldiers
 - [x] **Milestone 5:** Three unit types (Defender, Attacker, Archer)
-- [ ] **Milestone 6:** Tactics (hold position, attack commands, archer targeting)
+- [x] **Milestone 6:** Tactics (hold position, attack commands, archer targeting)
+- [x] **Milestone 7:** Health bars + win/lose screen
+- [ ] **Milestone 8:** More polish (selection UI, effects, maps)
 
 ---
 
@@ -263,6 +265,9 @@ Assets/Scripts/
 │
 ├── Unit.cs               ← Week 4 (shared stats) ✅
 ├── UnitType.cs           ← Week 4
+├── PlayerUnitAI.cs       ← Week 5 (tactics) ✅
+├── HealthBar.cs          ← Week 6+ ✅
+├── BattleManager.cs      ← Week 6+ ✅
 └── GameManager.cs        ← when needed
 ```
 
@@ -289,7 +294,9 @@ Assets/Scripts/
 | 3 | Multi-select | ✅ Shift+click units → click ground → all selected units move |
 | 4 | One enemy | ✅ Red units chase and attack; blue units fight back when in range |
 | 5 | Three unit types | ✅ Defender, Attacker, Archer with distinct HP, armor, damage, range, and speed |
-| 6 | Tactics | Hold position, attack commands, archer targeting |
+| 6 | Tactics | ✅ Hold (H), attack-click enemies, archers stop at range, defenders block while holding |
+| 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
+| 8 | More polish | Selection UI, effects, maps |
 
 ---
 
@@ -304,11 +311,24 @@ Run these from the Unity menu bar after opening `SampleScene`:
 | `Battle → Setup Milestone 3` | Five soldiers, multi-select |
 | `Battle → Setup Milestone 4` | Combat: teams, health, enemies, AI |
 | `Battle → Setup Milestone 5` | Three player unit types: Defender, Attacker, Archer |
+| `Battle → Setup Milestone 6` | Tactics: hold, attack orders, archer range behavior |
+| `Battle → Setup Milestone 7` | Health bars + battle win/lose screen |
+
+### Controls (Milestone 6+)
+
+| Input | Action |
+|-------|--------|
+| Left-click unit | Select |
+| Shift + left-click | Multi-select |
+| Left-click ground | Move selected units |
+| Left-click enemy | Attack target with selected units |
+| **H** | Hold position (defenders widen to block) |
+| Right-click | Deselect all |
 
 ---
 
 ## North star
 
-> 🎯 **"I command a squad of Defenders, Attackers, and Archers against red enemies."**
+> 🎯 **"I can fight a full battle, see unit health, and get a clear win or lose result."**
 
-Next up: tactics — hold position, attack commands, and archer targeting.
+Next up: selection UI, visual effects, and map variety.

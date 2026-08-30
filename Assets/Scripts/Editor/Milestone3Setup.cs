@@ -10,11 +10,11 @@ public static class Milestone3Setup
 
     static readonly Vector3[] SpawnPositions =
     {
-        new Vector3(-4f, 1f, 0f),
-        new Vector3(-2f, 1f, 0f),
-        new Vector3(0f, 1f, 0f),
-        new Vector3(2f, 1f, 0f),
-        new Vector3(4f, 1f, 0f),
+        new Vector3(UnitVisuals.LineX(0, UnitCount), 1f, UnitVisuals.PlayerLineZ),
+        new Vector3(UnitVisuals.LineX(1, UnitCount), 1f, UnitVisuals.PlayerLineZ),
+        new Vector3(UnitVisuals.LineX(2, UnitCount), 1f, UnitVisuals.PlayerLineZ),
+        new Vector3(UnitVisuals.LineX(3, UnitCount), 1f, UnitVisuals.PlayerLineZ),
+        new Vector3(UnitVisuals.LineX(4, UnitCount), 1f, UnitVisuals.PlayerLineZ),
     };
 
     [MenuItem(MenuPath)]
@@ -59,6 +59,7 @@ public static class Milestone3Setup
 
         soldier.name = name;
         soldier.transform.position = position;
+        soldier.transform.localScale = UnitVisuals.CapsuleScale;
 
         Renderer renderer = soldier.GetComponent<Renderer>();
         if (renderer != null)
