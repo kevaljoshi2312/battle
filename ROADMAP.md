@@ -23,7 +23,7 @@
 - [x] **Milestone 7:** Health bars + win/lose screen
 - [x] **Milestone 8:** Visual polish — selection ring, damage flash, orthographic camera
 - [x] **Milestone 9:** Combat feel — archer projectiles, death effects *(attack sounds/lunge optional)*
-- [ ] **Milestone 10:** Tactical terrain — obstacles, chokepoints, NavMesh, unfair battle test
+- [x] **Milestone 10:** Tactical terrain — bridge chokepoint, NavMesh, 11 vs 18 unfair battle
 
 ---
 
@@ -273,6 +273,7 @@ Assets/Scripts/
 ├── DamageFlash.cs        ← Milestone 8 ✅
 ├── Arrow.cs              ← Milestone 9 ✅
 ├── DeathEffect.cs        ← Milestone 9 ✅
+├── BattlefieldLayout.cs  ← Milestone 10 ✅
 └── GameManager.cs        ← when needed
 ```
 
@@ -303,7 +304,7 @@ Assets/Scripts/
 | 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
 | 8 | Visual polish | ✅ Selection ring, damage flash, orthographic camera (`BattleSceneSetup`) |
 | 9 | Combat feel | ✅ Archer projectiles (damage on hit); death tilt/shrink; optional: attack lunge, sounds |
-| 10 | Tactical terrain | Second map, walls/rocks, bridge chokepoint, NavMesh, unfair battle scenario |
+| 10 | Tactical terrain | ✅ Bridge map, side walls, NavMesh pathing, 11 player vs 18 enemy setup |
 
 **Build order:** 9 before 10. Combat feel is a small, isolated win; terrain needs NavMesh and movement changes.
 
@@ -357,8 +358,8 @@ Goals:
 
 | Side | Force |
 |------|-------|
-| Player | ~8 units (e.g. 2 archers back, 3 defenders on bridge) |
-| Enemy | ~15 units attacking through the choke |
+| Player | ~11 units (e.g. 4 archers back, 4 defenders on bridge) |
+| Enemy | ~18 units attacking through the choke |
 
 > Can a smaller army win through tactics — holding chokepoints, protecting archers, focus fire?
 
@@ -381,7 +382,7 @@ Run these from the Unity menu bar after opening `SampleScene`:
 | `Battle → Setup Milestone 7` | Health bars + battle win/lose screen |
 | `Battle → Setup Milestone 8` | Selection rings, damage flash, orthographic camera |
 | `Battle → Setup Milestone 9` | Archer projectiles, death effects |
-| `Battle → Setup Milestone 10` | *(planned)* Bridge map, obstacles, NavMesh, unfair battle |
+| `Battle → Setup Milestone 10` | Bridge map, walls, NavMesh bake, 11 vs 18 unfair battle |
 
 ### Controls (Milestone 6+)
 
@@ -406,4 +407,4 @@ Run these from the Unity menu bar after opening `SampleScene`:
 
 > 🎯 **"A smaller army can win through tactics — holding chokepoints, protecting archers, and choosing targets wisely."**
 
-**Next up:** Milestone 10 — bridge map, obstacles, and NavMesh pathfinding.
+**Next up:** Playtest the unfair battle — tune defender HP, enemy count, or bridge width until tactics can win.

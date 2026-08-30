@@ -55,16 +55,11 @@ public class EnemyAI : MonoBehaviour
 
     Vector3 GetChasePosition(Vector3 targetPosition, float stopDistance)
     {
-        Vector3 toTarget = targetPosition - transform.position;
-        toTarget.y = 0f;
-
-        float distance = toTarget.magnitude;
-        if (distance <= stopDistance)
-            return transform.position;
-
-        Vector3 chasePosition = transform.position + toTarget.normalized * (distance - stopDistance);
-        chasePosition.y = transform.position.y;
-        return chasePosition;
+        return UnitNavigation.GetSurroundChasePosition(
+            transform.position,
+            targetPosition,
+            stopDistance,
+            GetInstanceID());
     }
 
     static float HorizontalDistance(Vector3 from, Vector3 to)

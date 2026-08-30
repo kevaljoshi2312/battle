@@ -42,9 +42,19 @@ public static class UnitVisuals
     public const float BaseEnemyMoveSpeed = 5f;
     public static float EnemyMoveSpeed => BaseEnemyMoveSpeed * MoveSpeedScale;
 
+    // NavMesh agent + combat approach spacing (reduces stacking in chokepoints).
+    public const float NavAgentRadius = 0.35f;
+    public const float ApproachSlotSpacing = 0.45f;
+    public const int ApproachSlotCount = 9;
+
     public static float LineX(int index, int count)
     {
+        return LineX(index, count, SpawnSpacing);
+    }
+
+    public static float LineX(int index, int count, float spacing)
+    {
         float centerOffset = (count - 1) * 0.5f;
-        return (index - centerOffset) * SpawnSpacing;
+        return (index - centerOffset) * spacing;
     }
 }
