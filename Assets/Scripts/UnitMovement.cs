@@ -8,15 +8,41 @@ public class UnitMovement : MonoBehaviour
     NavMeshAgent agent;
     UnitFacing facing;
     Vector3 targetPosition;
+    Vector3 anchoredPosition;
     bool hasTarget;
+    bool isPositionAnchored;
+    int defaultAvoidancePriority;
 
     public float MoveSpeed => moveSpeed;
+    public bool HasMoveTarget => hasTarget;
 
     public void Configure(float speed)
     {
         moveSpeed = speed;
         if (agent != null)
             agent.speed = speed;
+    }
+
+    public void SetPositionAnchored(bool anchored)
+    {
+        if (anchored && !isPositionAnchored)
+        {
+            anchoredPosition = transform.position;
+            hasTarget = false;
+
+            if (CanUseNavMesh())
+            {
+                agent.isStopped = true;
+                agent.ResetPath();
+            }
+        }
+
+        isPositionAnchored = anchored;
+
+        if (agent == null)
+            return;
+
+        agent.avoidancePriority = anchored ? 0 : defaultAvoidancePriority;
     }
 
     void Awake()
@@ -28,14 +54,15 @@ public class UnitMovement : MonoBehaviour
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
-        agent.stoppingDistance = 0.25f;
+        agent.stoppingDistance = UnitVisuals.NavAgentStoppingDistance;
         agent.autoBraking = true;
         agent.angularSpeed = 0f;
         agent.radius = UnitVisuals.NavAgentRadius;
         agent.height = UnitVisuals.CapsuleHeight * 2f;
         agent.baseOffset = UnitVisuals.CapsuleHeight;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-        agent.avoidancePriority = 30 + (Mathf.Abs(GetInstanceID()) % 40);
+        defaultAvoidancePriority = 30 + (Mathf.Abs(GetInstanceID()) % 40);
+        agent.avoidancePriority = defaultAvoidancePriority;
         agent.speed = moveSpeed;
     }
 
@@ -45,10 +72,17 @@ public class UnitMovement : MonoBehaviour
             Configure(UnitVisuals.EnemyMoveSpeed);
 
         TryWarpToNavMesh();
+
+        if (GetComponent<Unit>() != null)
+            SetPositionAnchored(true);
     }
 
     public void MoveTo(Vector3 worldPosition)
     {
+        isPositionAnchored = false;
+        if (agent != null)
+            agent.avoidancePriority = defaultAvoidancePriority;
+
         targetPosition = worldPosition;
         targetPosition.y = transform.position.y;
         hasTarget = true;
@@ -102,6 +136,17 @@ public class UnitMovement : MonoBehaviour
 
         if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
             hasTarget = false;
+    }
+
+    void LateUpdate()
+    {
+        if (!isPositionAnchored || !CanUseNavMesh())
+            return;
+
+        Vector3 delta = transform.position - anchoredPosition;
+        delta.y = 0f;
+        if (delta.sqrMagnitude > 0.0001f)
+            agent.Warp(anchoredPosition);
     }
 
     bool CanUseNavMesh()

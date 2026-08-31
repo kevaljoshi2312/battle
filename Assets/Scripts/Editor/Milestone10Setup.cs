@@ -234,7 +234,7 @@ public static class Milestone10Setup
 
         EnsureTeam(enemy, Team.Enemy);
         EnsureHealth(enemy, 70);
-        EnsureCombat(enemy, damage: 14, attackRange: 2f, autoAttack: false);
+        EnsureCombat(enemy, damage: 14, attackRange: 2f, autoAttack: true);
         EnsureHealthBar(enemy);
         EnsureDamageFlash(enemy);
         EnsureDeathEffect(enemy);

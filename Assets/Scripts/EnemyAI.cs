@@ -9,7 +9,10 @@ public class EnemyAI : MonoBehaviour
     UnitCombat combat;
     UnitFacing facing;
     UnitTeam unitTeam;
+    Health primaryTarget;
     Health currentTarget;
+    Vector3 lastMoveDestination;
+    float lastMoveOrderTime;
 
     void Awake()
     {
@@ -21,11 +24,12 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        if (currentTarget == null || !currentTarget.IsAlive)
-            currentTarget = FindNearestEnemy();
+        if (primaryTarget == null || !primaryTarget.IsAlive)
+            primaryTarget = FindAttackTarget();
 
-        if (currentTarget == null)
+        if (primaryTarget == null)
         {
+            currentTarget = null;
             movement?.Stop();
             return;
         }
@@ -36,30 +40,45 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        currentTarget = primaryTarget;
+
+        if (!combat.IsInRange(primaryTarget.transform))
+        {
+            Health blocker = UnitNavigation.FindBlockingOpponent(
+                transform.position,
+                primaryTarget,
+                unitTeam.Team,
+                gameObject);
+
+            if (blocker != null)
+                currentTarget = blocker;
+        }
+
         Transform targetTransform = currentTarget.transform;
+        combat.SetAttackTarget(currentTarget);
         facing?.FaceToward(targetTransform.position);
 
-        float stopDistance = combat.AttackRange * stopDistanceFactor;
-        float distanceToTarget = HorizontalDistance(transform.position, targetTransform.position);
-
-        if (distanceToTarget <= stopDistance)
+        if (combat.IsInRange(targetTransform))
         {
             movement?.Stop();
             combat.TryAttack(currentTarget);
             return;
         }
 
-        if (movement != null)
-            movement.MoveTo(GetChasePosition(targetTransform.position, stopDistance));
-    }
-
-    Vector3 GetChasePosition(Vector3 targetPosition, float stopDistance)
-    {
-        return UnitNavigation.GetSurroundChasePosition(
+        float stopDistance = combat.AttackRange * stopDistanceFactor;
+        Vector3 chasePosition = UnitNavigation.GetSurroundChasePosition(
             transform.position,
-            targetPosition,
+            targetTransform.position,
             stopDistance,
+            combat.AttackRange,
             GetInstanceID());
+
+        if (!UnitNavigation.ShouldIssueMoveOrder(chasePosition, lastMoveDestination, lastMoveOrderTime))
+            return;
+
+        lastMoveDestination = chasePosition;
+        lastMoveOrderTime = Time.time;
+        movement?.MoveTo(chasePosition);
     }
 
     static float HorizontalDistance(Vector3 from, Vector3 to)
@@ -69,13 +88,17 @@ public class EnemyAI : MonoBehaviour
         return delta.magnitude;
     }
 
-    Health FindNearestEnemy()
+    Health FindAttackTarget()
     {
         if (unitTeam == null)
             return null;
 
-        Health nearest = null;
-        float nearestDistance = detectRange;
+        Health first = null;
+        Health second = null;
+        Health third = null;
+        float firstDist = detectRange;
+        float secondDist = detectRange;
+        float thirdDist = detectRange;
 
         foreach (Health health in FindObjectsByType<Health>(FindObjectsSortMode.None))
         {
@@ -87,13 +110,49 @@ public class EnemyAI : MonoBehaviour
                 continue;
 
             float distance = HorizontalDistance(transform.position, health.transform.position);
-            if (distance > nearestDistance)
+            if (distance > detectRange)
                 continue;
 
-            nearest = health;
-            nearestDistance = distance;
+            if (distance < firstDist)
+            {
+                third = second;
+                thirdDist = secondDist;
+                second = first;
+                secondDist = firstDist;
+                first = health;
+                firstDist = distance;
+            }
+            else if (distance < secondDist)
+            {
+                third = second;
+                thirdDist = secondDist;
+                second = health;
+                secondDist = distance;
+            }
+            else if (distance < thirdDist)
+            {
+                third = health;
+                thirdDist = distance;
+            }
         }
 
-        return nearest;
+        int candidateCount = 0;
+        if (first != null)
+            candidateCount++;
+        if (second != null)
+            candidateCount++;
+        if (third != null)
+            candidateCount++;
+
+        if (candidateCount == 0)
+            return null;
+
+        int pick = UnitNavigation.Mod(GetInstanceID(), candidateCount);
+        if (pick == 0)
+            return first;
+        if (pick == 1)
+            return second;
+
+        return third;
     }
 }

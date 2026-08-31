@@ -8,6 +8,7 @@ public static class BattleSceneSetup
     public const float CameraPitch = 45f;
     public const float OrthographicSize = 7f;
     public const float BridgeOrthographicSize = BattlefieldLayout.BridgeCameraOrthographicSize;
+    public const float DirectionalLightPositionX = 1000f;
 
     public static void ConfigureMainCamera()
     {
@@ -27,6 +28,25 @@ public static class BattleSceneSetup
         camera.transform.rotation = Quaternion.Euler(CameraPitch, 0f, 0f);
         camera.orthographic = true;
         camera.orthographicSize = orthographicSize;
+
+        ConfigureDirectionalLight();
+    }
+
+    public static void ConfigureDirectionalLight()
+    {
+        foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+        {
+            if (light.type != LightType.Directional)
+                continue;
+
+            Transform lightTransform = light.transform;
+            Vector3 position = lightTransform.position;
+            position.x = DirectionalLightPositionX;
+            lightTransform.position = position;
+            return;
+        }
+
+        Debug.LogWarning("No Directional Light found in scene.");
     }
 }
 #endif

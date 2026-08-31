@@ -14,6 +14,8 @@ public class PlayerUnitAI : MonoBehaviour
     Health attackTarget;
     bool isHolding;
     float defaultColliderRadius;
+    Vector3 lastMoveDestination;
+    float lastMoveOrderTime;
 
     public bool IsHolding => isHolding;
 
@@ -43,6 +45,18 @@ public class PlayerUnitAI : MonoBehaviour
         ChaseAndAttack(attackTarget);
     }
 
+    void LateUpdate()
+    {
+        if (movement == null)
+            return;
+
+        bool shouldAnchor = isHolding
+            || (attackTarget != null && combat != null && combat.IsInRange(attackTarget.transform))
+            || (attackTarget == null && !movement.HasMoveTarget);
+
+        movement.SetPositionAnchored(shouldAnchor);
+    }
+
     public void HoldPosition()
     {
         isHolding = true;
@@ -56,6 +70,8 @@ public class PlayerUnitAI : MonoBehaviour
         isHolding = false;
         ClearAttackOrder();
         SetDefenderBlock(false);
+        lastMoveDestination = position;
+        lastMoveOrderTime = Time.time;
         movement?.MoveTo(position);
     }
 
@@ -85,16 +101,21 @@ public class PlayerUnitAI : MonoBehaviour
         facing?.FaceToward(targetTransform.position);
 
         float stopDistance = GetStopDistance();
-        float distanceToTarget = HorizontalDistance(transform.position, targetTransform.position);
 
-        if (distanceToTarget <= stopDistance)
+        if (combat.IsInRange(targetTransform))
         {
             movement?.Stop();
             combat.TryAttack(target);
             return;
         }
 
-        movement?.MoveTo(GetChasePosition(targetTransform.position, stopDistance));
+        Vector3 chasePosition = GetChasePosition(targetTransform.position, stopDistance);
+        if (!UnitNavigation.ShouldIssueMoveOrder(chasePosition, lastMoveDestination, lastMoveOrderTime))
+            return;
+
+        lastMoveDestination = chasePosition;
+        lastMoveOrderTime = Time.time;
+        movement?.MoveTo(chasePosition);
     }
 
     float GetStopDistance()
@@ -115,6 +136,7 @@ public class PlayerUnitAI : MonoBehaviour
             transform.position,
             targetPosition,
             stopDistance,
+            combat.AttackRange,
             GetInstanceID());
     }
 

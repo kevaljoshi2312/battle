@@ -15,6 +15,9 @@ public static class UnitVisuals
 
     public static Vector3 CapsuleScale => new Vector3(CapsuleRadius, CapsuleHeight, CapsuleRadius);
 
+    // Default capsule primitive radius is 0.5 local; scale.x/z = CapsuleRadius.
+    public static float CapsuleWorldRadius => CapsuleRadius * 0.5f;
+
     public const float HealthBarWidth = 0.5f;
     public const float HealthBarHeight = 0.1f;
 
@@ -43,9 +46,12 @@ public static class UnitVisuals
     public static float EnemyMoveSpeed => BaseEnemyMoveSpeed * MoveSpeedScale;
 
     // NavMesh agent + combat approach spacing (reduces stacking in chokepoints).
-    public const float NavAgentRadius = 0.35f;
+    public static float NavAgentRadius => CapsuleWorldRadius;
     public const float ApproachSlotSpacing = 0.45f;
     public const int ApproachSlotCount = 9;
+    public const float MoveOrderInterval = 0.25f;
+    public const float MoveDestinationEpsilon = 0.4f;
+    public const float NavAgentStoppingDistance = 0.4f;
 
     public static float LineX(int index, int count)
     {
