@@ -11,6 +11,9 @@ public class TargetingDebugUI : MonoBehaviour
 
     void LateUpdate()
     {
+        if (!BattleDebug.ShowTargetingUI)
+            return;
+
         if (panelText == null)
             BuildPanel();
 
@@ -34,35 +37,45 @@ public class TargetingDebugUI : MonoBehaviour
     {
         PlayerController controller = FindAnyObjectByType<PlayerController>();
         if (controller == null || controller.SelectedUnits.Count == 0)
-            return "Select a player unit to see targeting info.";
+            return "Select a squad (Defenders or Archers) to see targeting info.";
 
         StringBuilder builder = new StringBuilder();
-        IReadOnlyList<UnitSelection> selectedUnits = controller.SelectedUnits;
+        IReadOnlyList<UnitType> selectedSquads = controller.SelectedSquads;
 
-        for (int i = 0; i < selectedUnits.Count; i++)
+        for (int i = 0; i < selectedSquads.Count; i++)
         {
-            UnitSelection selection = selectedUnits[i];
-            if (selection == null)
-                continue;
-
             if (i > 0)
                 builder.AppendLine();
 
-            AppendUnitTargeting(builder, selection);
+            AppendSquadTargeting(builder, selectedSquads[i], controller.SelectedUnits);
         }
 
         return builder.ToString();
     }
 
-    void AppendUnitTargeting(StringBuilder builder, UnitSelection selection)
+    void AppendSquadTargeting(StringBuilder builder, UnitType squadType, IReadOnlyList<UnitSelection> selectedUnits)
     {
-        Health health = selection.GetComponent<Health>();
-        UnitIdentity identity = selection.GetComponent<UnitIdentity>();
-        string unitLabel = identity != null ? $"{selection.gameObject.name} ({identity.Label})" : selection.gameObject.name;
+        List<Health> squadMembers = new List<Health>();
+        List<string> memberLabels = new List<string>();
 
-        builder.AppendLine(unitLabel);
+        foreach (UnitSelection selection in selectedUnits)
+        {
+            Unit unit = selection.GetComponent<Unit>();
+            if (unit == null || unit.Type != squadType)
+                continue;
 
-        if (health == null || !health.IsAlive)
+            Health health = selection.GetComponent<Health>();
+            if (health == null || !health.IsAlive)
+                continue;
+
+            squadMembers.Add(health);
+            memberLabels.Add(UnitIdentity.GetLabel(health));
+        }
+
+        memberLabels.Sort();
+        builder.AppendLine($"{squadType}s ({squadMembers.Count}): {string.Join(", ", memberLabels)}");
+
+        if (squadMembers.Count == 0)
         {
             builder.AppendLine("  (dead)");
             return;
@@ -76,10 +89,12 @@ public class TargetingDebugUI : MonoBehaviour
             if (enemy == null)
                 continue;
 
-            if (enemy.PrimaryTarget == health)
+            Health primary = enemy.PrimaryTarget;
+            if (primary != null && squadMembers.Contains(primary))
                 primaryEnemies.Add(GetEnemyLabel(enemy));
 
-            if (enemy.CurrentTarget == health && enemy.CurrentTarget != enemy.PrimaryTarget)
+            Health current = enemy.CurrentTarget;
+            if (current != null && squadMembers.Contains(current) && current != primary)
                 currentEnemies.Add(GetEnemyLabel(enemy));
         }
 

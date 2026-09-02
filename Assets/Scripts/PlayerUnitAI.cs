@@ -11,6 +11,7 @@ public class PlayerUnitAI : MonoBehaviour
     CapsuleCollider capsuleCollider;
     Health attackTarget;
     bool isHolding;
+    bool isShieldWall;
     float defaultColliderRadius;
     Vector3 lastMoveDestination;
     float lastMoveOrderTime;
@@ -31,6 +32,10 @@ public class PlayerUnitAI : MonoBehaviour
 
     void Update()
     {
+        SquadAbility ability = GetComponent<SquadAbility>();
+        if (isShieldWall || (ability != null && ability.IsCharging))
+            return;
+
         if (attackTarget == null)
             return;
 
@@ -48,7 +53,8 @@ public class PlayerUnitAI : MonoBehaviour
         if (movement == null)
             return;
 
-        bool shouldAnchor = isHolding
+        bool shouldAnchor = isShieldWall
+            || isHolding
             || (attackTarget != null && combat != null && combat.IsInRange(attackTarget.transform))
             || (attackTarget == null && !movement.HasMoveTarget);
 
@@ -58,14 +64,32 @@ public class PlayerUnitAI : MonoBehaviour
     public void HoldPosition()
     {
         isHolding = true;
+        isShieldWall = false;
         ClearAttackOrder();
         movement?.Stop();
         SetDefenderBlock(true);
     }
 
+    public void EnterShieldWall()
+    {
+        isHolding = true;
+        isShieldWall = true;
+        ClearAttackOrder();
+        movement?.Stop();
+    }
+
+    public void ExitShieldWall()
+    {
+        isShieldWall = false;
+        isHolding = false;
+        SetDefenderBlock(false);
+    }
+
     public void MoveToPosition(Vector3 position)
     {
         isHolding = false;
+        isShieldWall = false;
+        GetComponent<SquadAbility>()?.CancelShieldWall();
         ClearAttackOrder();
         SetDefenderBlock(false);
         lastMoveDestination = position;
@@ -79,6 +103,8 @@ public class PlayerUnitAI : MonoBehaviour
             return;
 
         isHolding = false;
+        isShieldWall = false;
+        GetComponent<SquadAbility>()?.CancelShieldWall();
         attackTarget = target;
         combat?.SetAttackTarget(target);
         SetDefenderBlock(false);

@@ -12,6 +12,7 @@ public static class BattlefieldLayout
 
     public static float PlayerArcherSecondRowZ => PlayerBackZ + FormationRowSpacing;
     public static float PlayerDefenderReserveZ => PlayerDefenderZ - FormationRowSpacing;
+    public static float PlayerAttackerReserveZ => PlayerDefenderReserveZ - FormationRowSpacing;
 
     public const float WallHeight = 3f;
     public const float WallThickness = 2f;

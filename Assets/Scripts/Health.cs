@@ -29,6 +29,10 @@ public class Health : MonoBehaviour
         if (!IsAlive || amount <= 0)
             return;
 
+        DamageModifier modifier = GetComponent<DamageModifier>();
+        if (modifier != null)
+            amount = Mathf.Max(1, Mathf.RoundToInt(amount * modifier.IncomingDamageMultiplier));
+
         int damageAfterArmor = Mathf.Max(1, amount - armor);
         currentHealth -= damageAfterArmor;
 

@@ -14,6 +14,9 @@ public class UnitWorldLabel : MonoBehaviour
 
     void Awake()
     {
+        if (!BattleDebug.ShowWorldLabels)
+            return;
+
         health = GetComponent<Health>();
         identity = GetComponent<UnitIdentity>();
         enemyAI = GetComponent<EnemyAI>();
@@ -28,6 +31,9 @@ public class UnitWorldLabel : MonoBehaviour
 
     void LateUpdate()
     {
+        if (!BattleDebug.ShowWorldLabels)
+            return;
+
         if (health == null || labelRoot == null || textMesh == null)
             return;
 

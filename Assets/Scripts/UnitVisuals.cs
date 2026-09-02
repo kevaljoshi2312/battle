@@ -45,7 +45,7 @@ public static class UnitVisuals
         return MeleeChaseStopDistance;
     }
 
-    public const float MoveSpeedScale = 0.5f;
+    public const float MoveSpeedScale = 0.25f;
     public const float BaseTurnSpeed = 720f;
     public static float TurnSpeed => BaseTurnSpeed * MoveSpeedScale;
 

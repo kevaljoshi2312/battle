@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour
 
     public IReadOnlyList<UnitSelection> SelectedUnits => selectedUnits;
 
+    public IReadOnlyList<UnitType> SelectedSquads => GetSelectedSquadTypes();
+
     void Update()
     {
         PruneDestroyedUnits();
@@ -15,10 +17,25 @@ public class PlayerController : MonoBehaviour
         if (Mouse.current == null || Camera.main == null)
             return;
 
-        if (Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
+        if (Keyboard.current != null)
         {
-            HoldSelectedUnits();
-            return;
+            if (Keyboard.current.hKey.wasPressedThisFrame)
+            {
+                ActivateShieldWall();
+                return;
+            }
+
+            if (Keyboard.current.qKey.wasPressedThisFrame)
+            {
+                ActivateCharge();
+                return;
+            }
+
+            if (Keyboard.current.wKey.wasPressedThisFrame)
+            {
+                ActivateVolley();
+                return;
+            }
         }
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
@@ -60,16 +77,82 @@ public class PlayerController : MonoBehaviour
         MoveSelectedUnitsTo(groundPoint);
     }
 
-    void HoldSelectedUnits()
+    void ActivateShieldWall()
     {
         PruneDestroyedUnits();
+        if (selectedUnits.Count == 0)
+            return;
 
         foreach (UnitSelection unit in selectedUnits)
         {
+            SquadAbility ability = unit.GetComponent<SquadAbility>();
+            if (ability != null && ability.TryActivateShieldWall())
+                continue;
+
             PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
             if (ai != null)
                 ai.HoldPosition();
         }
+    }
+
+    void ActivateCharge()
+    {
+        PruneDestroyedUnits();
+        if (selectedUnits.Count == 0 || !TryGetWorldTargetFromMouse(out Vector3 destination, out Health enemyTarget))
+            return;
+
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            SquadAbility ability = unit.GetComponent<SquadAbility>();
+            ability?.TryActivateCharge(destination, enemyTarget);
+        }
+    }
+
+    void ActivateVolley()
+    {
+        PruneDestroyedUnits();
+        if (selectedUnits.Count == 0 || !TryGetGroundPointFromMouse(out Vector3 volleyCenter))
+            return;
+
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            SquadAbility ability = unit.GetComponent<SquadAbility>();
+            ability?.TryActivateVolley(volleyCenter);
+        }
+    }
+
+    bool TryGetWorldTargetFromMouse(out Vector3 destination, out Health enemyTarget)
+    {
+        destination = default;
+        enemyTarget = null;
+
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+        if (hits.Length == 0)
+            return false;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        enemyTarget = FindClosestEnemy(hits);
+
+        if (enemyTarget != null)
+        {
+            destination = enemyTarget.transform.position;
+            return true;
+        }
+
+        return TryFindGroundPoint(hits, out destination);
+    }
+
+    bool TryGetGroundPointFromMouse(out Vector3 point)
+    {
+        point = default;
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+        if (hits.Length == 0)
+            return false;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        return TryFindGroundPoint(hits, out point);
     }
 
     void AttackWithSelectedUnits(Health target)
@@ -207,43 +290,136 @@ public class PlayerController : MonoBehaviour
 
     void HandleUnitClick(UnitSelection unit)
     {
+        Unit unitProfile = unit.GetComponent<Unit>();
+        UnitType squadType = unitProfile != null
+            ? unitProfile.Type
+            : UnitType.Defender;
+
         bool shiftHeld = Keyboard.current != null &&
             (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
 
         if (shiftHeld)
         {
-            ToggleUnitInSelection(unit);
+            ToggleSquadInSelection(squadType);
             return;
         }
 
-        if (selectedUnits.Count == 1 && selectedUnits[0] == unit)
+        if (IsOnlySquadSelected(squadType))
         {
             DeselectAll();
             return;
         }
 
-        SelectOnly(unit);
+        SelectSquadOnly(squadType);
     }
 
-    void ToggleUnitInSelection(UnitSelection unit)
+    void SelectSquadOnly(UnitType type)
     {
-        if (unit.IsSelected)
+        DeselectAll();
+
+        foreach (UnitSelection unit in GetLivingPlayerUnitsOfType(type))
         {
-            unit.Deselect();
-            selectedUnits.Remove(unit);
+            unit.Select();
+            selectedUnits.Add(unit);
+        }
+    }
+
+    void ToggleSquadInSelection(UnitType type)
+    {
+        List<UnitSelection> squad = GetLivingPlayerUnitsOfType(type);
+        if (squad.Count == 0)
+            return;
+
+        bool allSelected = true;
+        foreach (UnitSelection unit in squad)
+        {
+            if (!unit.IsSelected)
+            {
+                allSelected = false;
+                break;
+            }
+        }
+
+        if (allSelected)
+        {
+            foreach (UnitSelection unit in squad)
+            {
+                unit.Deselect();
+                selectedUnits.Remove(unit);
+            }
+
             return;
         }
 
-        unit.Select();
-        if (!selectedUnits.Contains(unit))
-            selectedUnits.Add(unit);
+        foreach (UnitSelection unit in squad)
+        {
+            if (unit.IsSelected)
+                continue;
+
+            unit.Select();
+            if (!selectedUnits.Contains(unit))
+                selectedUnits.Add(unit);
+        }
     }
 
-    void SelectOnly(UnitSelection unit)
+    bool IsOnlySquadSelected(UnitType type)
     {
-        DeselectAll();
-        unit.Select();
-        selectedUnits.Add(unit);
+        List<UnitSelection> squad = GetLivingPlayerUnitsOfType(type);
+        if (squad.Count == 0 || selectedUnits.Count != squad.Count)
+            return false;
+
+        foreach (UnitSelection unit in squad)
+        {
+            if (!unit.IsSelected)
+                return false;
+        }
+
+        return true;
+    }
+
+    List<UnitType> GetSelectedSquadTypes()
+    {
+        List<UnitType> squadTypes = new List<UnitType>();
+        PruneDestroyedUnits();
+
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (unitProfile == null)
+                continue;
+
+            if (!squadTypes.Contains(unitProfile.Type))
+                squadTypes.Add(unitProfile.Type);
+        }
+
+        return squadTypes;
+    }
+
+    static List<UnitSelection> GetLivingPlayerUnitsOfType(UnitType type)
+    {
+        List<UnitSelection> units = new List<UnitSelection>();
+
+        foreach (UnitSelection selection in Object.FindObjectsByType<UnitSelection>(FindObjectsSortMode.None))
+        {
+            if (selection == null)
+                continue;
+
+            UnitTeam team = selection.GetComponent<UnitTeam>();
+            if (team == null || team.Team != Team.Player)
+                continue;
+
+            Health health = selection.GetComponent<Health>();
+            if (health != null && !health.IsAlive)
+                continue;
+
+            Unit unit = selection.GetComponent<Unit>();
+            if (unit == null || unit.Type != type)
+                continue;
+
+            units.Add(selection);
+        }
+
+        return units;
     }
 
     void DeselectAll()

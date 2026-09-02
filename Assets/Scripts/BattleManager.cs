@@ -12,8 +12,14 @@ public class BattleManager : MonoBehaviour
 
     void Awake()
     {
+        if (!BattleDebug.ShowTargetingUI)
+        {
+            TargetingDebugUI debugUi = GetComponent<TargetingDebugUI>();
+            if (debugUi != null)
+                Destroy(debugUi);
+        }
+
         BuildUI();
-        EnsureTargetingDebugUI();
     }
 
     void Update()
@@ -151,11 +157,5 @@ public class BattleManager : MonoBehaviour
         GameObject eventSystemObject = new GameObject("EventSystem");
         eventSystemObject.AddComponent<EventSystem>();
         eventSystemObject.AddComponent<InputSystemUIInputModule>();
-    }
-
-    void EnsureTargetingDebugUI()
-    {
-        if (GetComponent<TargetingDebugUI>() == null)
-            gameObject.AddComponent<TargetingDebugUI>();
     }
 }

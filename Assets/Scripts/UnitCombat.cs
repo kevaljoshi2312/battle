@@ -88,9 +88,26 @@ public class UnitCombat : MonoBehaviour
         if (UnitVisuals.IsRangedAttack(attackRange))
             FireProjectile(target);
         else
-            target.TakeDamage(damage);
+            DealMeleeDamage(target);
 
         nextAttackTime = Time.time + attackCooldown;
+    }
+
+    void DealMeleeDamage(Health target)
+    {
+        int totalDamage = damage;
+        DamageModifier modifier = GetComponent<DamageModifier>();
+        if (modifier != null)
+        {
+            totalDamage = Mathf.RoundToInt(damage * modifier.OutgoingDamageMultiplier);
+            if (modifier.BonusDamageOnNextHit > 0)
+            {
+                totalDamage += modifier.BonusDamageOnNextHit;
+                modifier.ConsumeBonusDamageOnHit();
+            }
+        }
+
+        target.TakeDamage(totalDamage);
     }
 
     void FireProjectile(Health target)

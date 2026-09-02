@@ -19,9 +19,9 @@ public static class Milestone10Setup
         ("Defender_Bridge_1", UnitType.Defender, FormationPosition(0, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
         ("Defender_Bridge_2", UnitType.Defender, FormationPosition(1, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
         ("Defender_Bridge_3", UnitType.Defender, FormationPosition(2, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
-        ("Defender_Reserve_1", UnitType.Defender, FormationPosition(0, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
-        ("Defender_Reserve_2", UnitType.Defender, FormationPosition(1, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
-        ("Defender_Reserve_3", UnitType.Defender, FormationPosition(2, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
+        ("Defender_Reserve_1", UnitType.Defender, FormationPosition(1, 1, BattlefieldLayout.PlayerDefenderReserveZ)),
+        ("Attacker_1", UnitType.Attacker, FormationPosition(0, 2, BattlefieldLayout.PlayerAttackerReserveZ)),
+        ("Attacker_2", UnitType.Attacker, FormationPosition(1, 2, BattlefieldLayout.PlayerAttackerReserveZ)),
     };
 
     [MenuItem(MenuPath)]
@@ -29,6 +29,7 @@ public static class Milestone10Setup
     {
         EnsurePlayerController();
         EnsureBattleManager();
+        RemoveDebugComponents();
         SetupBattlefield();
         CleanupLegacyUnits();
         SetupPlayerUnits();
@@ -223,6 +224,7 @@ public static class Milestone10Setup
         unit.AddComponent<UnitCombat>();
         unit.AddComponent<UnitTeam>();
         unit.AddComponent<PlayerUnitAI>();
+        unit.AddComponent<SquadAbility>();
         Unit unitProfile = unit.AddComponent<Unit>();
 
         EnsureTeam(unit, Team.Player);
@@ -278,8 +280,7 @@ public static class Milestone10Setup
             if (health.GetComponent<HealthBar>() == null)
                 health.gameObject.AddComponent<HealthBar>();
 
-            if (health.GetComponent<UnitWorldLabel>() == null)
-                health.gameObject.AddComponent<UnitWorldLabel>();
+            EnsureUnitWorldLabel(health.gameObject);
 
             if (health.GetComponent<UnitFacing>() == null)
                 health.gameObject.AddComponent<UnitFacing>();
@@ -291,8 +292,14 @@ public static class Milestone10Setup
                 health.gameObject.AddComponent<DamageFlash>();
 
             UnitTeam unitTeam = health.GetComponent<UnitTeam>();
-            if (unitTeam != null && unitTeam.Team == Team.Player && health.GetComponent<SelectionRing>() == null)
-                health.gameObject.AddComponent<SelectionRing>();
+            if (unitTeam != null && unitTeam.Team == Team.Player)
+            {
+                if (health.GetComponent<SelectionRing>() == null)
+                    health.gameObject.AddComponent<SelectionRing>();
+
+                if (health.GetComponent<SquadAbility>() == null)
+                    health.gameObject.AddComponent<SquadAbility>();
+            }
 
             if (health.GetComponent<UnitIdentity>() == null && unitTeam != null)
             {
@@ -320,9 +327,24 @@ public static class Milestone10Setup
 
         if (manager.GetComponent<BattleManager>() == null)
             manager.AddComponent<BattleManager>();
+    }
 
-        if (manager.GetComponent<TargetingDebugUI>() == null)
-            manager.AddComponent<TargetingDebugUI>();
+    static void RemoveDebugComponents()
+    {
+        foreach (TargetingDebugUI debugUi in Object.FindObjectsByType<TargetingDebugUI>(FindObjectsSortMode.None))
+            Object.DestroyImmediate(debugUi);
+
+        if (BattleDebug.ShowWorldLabels)
+            return;
+
+        foreach (UnitWorldLabel label in Object.FindObjectsByType<UnitWorldLabel>(FindObjectsSortMode.None))
+            Object.DestroyImmediate(label);
+
+        foreach (GameObject root in EditorSceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            if (root.name.EndsWith("_WorldLabel"))
+                Object.DestroyImmediate(root);
+        }
     }
 
     static void EnsureTeam(GameObject unit, Team team)
@@ -362,6 +384,9 @@ public static class Milestone10Setup
 
     static void EnsureUnitWorldLabel(GameObject unit)
     {
+        if (!BattleDebug.ShowWorldLabels)
+            return;
+
         if (unit.GetComponent<UnitWorldLabel>() == null)
             unit.AddComponent<UnitWorldLabel>();
     }

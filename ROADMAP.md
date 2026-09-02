@@ -23,7 +23,9 @@
 - [x] **Milestone 7:** Health bars + win/lose screen
 - [x] **Milestone 8:** Visual polish — selection ring, damage flash, orthographic camera
 - [x] **Milestone 9:** Combat feel — archer projectiles, death effects *(attack sounds/lunge optional)*
-- [x] **Milestone 10:** Tactical terrain — bridge chokepoint, NavMesh, 11 vs 18 unfair battle
+- [x] **Milestone 10:** Tactical terrain — bridge chokepoint, NavMesh, 10 vs 18 unfair battle
+- [x] **Milestone 10.5:** Tactical abilities prototype — Shield Wall, Charge, Volley (H / Q / W)
+- [ ] **Milestone 11+:** See [New direction](#new-direction-prototype--fun-game) below
 
 ---
 
@@ -304,9 +306,118 @@ Assets/Scripts/
 | 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
 | 8 | Visual polish | ✅ Selection ring, damage flash, orthographic camera (`BattleSceneSetup`) |
 | 9 | Combat feel | ✅ Archer projectiles (damage on hit); death tilt/shrink; optional: attack lunge, sounds |
-| 10 | Tactical terrain | ✅ Bridge map, side walls, NavMesh pathing, 11 player vs 18 enemy setup |
+| 10 | Tactical terrain | ✅ Bridge map, side walls, NavMesh pathing, 10 vs 18 unfair battle |
+| 10.5 | Tactical abilities prototype | ✅ H Shield Wall, Q Charge, W Volley — validate fun before big refactors |
 
-**Build order:** 9 before 10. Combat feel is a small, isolated win; terrain needs NavMesh and movement changes.
+**Build order (old):** 9 before 10. Combat feel is a small, isolated win; terrain needs NavMesh and movement changes.
+
+---
+
+## New direction: prototype → fun game
+
+> **Pivot:** The technical foundation works. Next milestones must answer: *Can the player make exciting tactical decisions during battle?*
+
+**North star (new):**
+
+> 🎯 **"I'm thinking during the battle — when to shield, when to charge, when to volley — not just traffic-directing capsules."**
+
+### Recommended order
+
+```text
+CURRENT STATE (Milestones 1–10)
+     │
+     ▼
+10.5 ── Fun experiment (abilities prototype)          ✅
+     │
+     ▼
+11 ─── Active abilities (cooldowns, UI, balance)
+     │
+     ▼
+12 ─── Better battle scenarios (events, reinforcements)
+     │
+     ▼
+13 ─── Tactical objectives (hold, assassinate, escape…)
+     │
+     ▼
+14 ─── Squad system (visible squads, less micromanagement)
+     │
+     ▼
+15 ─── Dynamic enemy AI
+     │
+     ▼
+16 ─── Combat feel & polish
+     │
+     ▼
+17 ─── Second map + terrain types
+     │
+     ▼
+18 ─── Progression / meta-game
+```
+
+> **Don't rebuild around squads first.** Prove active abilities make battles fun on the current architecture, then refactor.
+
+### Milestone 10.5 — Fun experiment ✅
+
+Temporary abilities on existing units (ugly is fine):
+
+| Key | Squad | Ability |
+|-----|-------|---------|
+| **H** | Defenders | **Shield Wall** — 65% damage reduction, cannot move, wider block, 8s / 15s CD |
+| **Q** | Attackers | **Charge** — rush to cursor, bonus impact damage, then vulnerable |
+| **W** | Archers | **Volley** — AoE damage at cursor, 18s CD |
+
+Archers selected + **H** = hold position (no shield wall).
+
+**Done when:** You catch yourself timing Volley for grouped enemies or holding Shield Wall until the bridge clogs.
+
+### Milestone 11 — Active abilities
+
+Polish the prototype into real systems: cooldown UI, VFX, balance pass, per-squad ability bar.
+
+### Milestone 12 — Battlefield events
+
+Reinforcements, flanks, bridge collapse, commander exposed — each forces a decision, not random chaos.
+
+### Milestone 13 — Tactical objectives
+
+Hold, assassinate, escape, survive waves, capture point — same units, different missions.
+
+### Milestone 14 — Squad system
+
+Shield / Attack / Archer squads with 3–5 visible soldiers; command squads not individuals.
+
+### Milestone 15 — Dynamic enemy AI
+
+Smarter targeting, flanking behavior, ability counters.
+
+### Milestone 16 — Combat feel & polish
+
+Animations, impact FX, screen shake, sound, death polish.
+
+### Milestone 17 — Second map + terrain
+
+Open field vs choke, terrain types.
+
+### Milestone 18 — Progression / meta-game
+
+Army building, unlocks, campaign structure.
+
+---
+
+## Legacy milestone tracker (1–10)
+
+| # | Milestone | Done when |
+|---|-----------|-----------|
+| 1 | Click-to-move | ✅ Capsule follows mouse clicks on the plane |
+| 2 | Selection | ✅ Click soldier → highlight → click ground → only selected unit moves |
+| 3 | Multi-select | ✅ Shift+click units → click ground → all selected units move |
+| 4 | One enemy | ✅ Red units chase and attack; blue units fight back when in range |
+| 5 | Three unit types | ✅ Defender, Attacker, Archer with distinct HP, armor, damage, range, and speed |
+| 6 | Tactics | ✅ Hold (H), attack-click enemies, archers stop at range, defenders block while holding |
+| 7 | Health bars + win/lose | ✅ Floating HP bars; battle ends with restart on victory/defeat |
+| 8 | Visual polish | ✅ Selection ring, damage flash, orthographic camera (`BattleSceneSetup`) |
+| 9 | Combat feel | ✅ Archer projectiles (damage on hit); death tilt/shrink; optional: attack lunge, sounds |
+| 10 | Tactical terrain | ✅ Bridge map, side walls, NavMesh pathing, 10 player vs 18 enemy setup |
 
 ### Milestone 9 — Combat feel
 
@@ -388,23 +499,25 @@ Run these from the Unity menu bar after opening `SampleScene`:
 
 | Input | Action |
 |-------|--------|
-| Left-click unit | Select |
-| Shift + left-click | Multi-select |
-| Left-click ground | Move selected units |
-| Left-click enemy | Attack target with selected units |
-| **H** | Hold position (defenders widen to block) |
+| Left-click unit | Select squad (all Defenders or all Archers) |
+| Shift + left-click | Add/remove squad from selection |
+| Left-click ground | Move selected squads |
+| Left-click enemy | Attack with selected squads |
+| **H** | Defenders: Shield Wall · Archers: hold position |
+| **Q** | Charge (attacker squad toward cursor) |
+| **W** | Volley (archers — damage at cursor) |
 | Right-click | Deselect all |
 
 ---
 
 ## North star
 
-**Achieved (Milestones 1–8):**
+**Achieved (Milestones 1–10):**
 
-> 🎯 **"I can fight a full battle, see unit health, and get a clear win or lose result."**
+> 🎯 **"I can fight a full battle on tactical terrain with chokepoints, NavMesh, and squad commands."**
 
-**Next validation (Milestones 9–10):**
+**Validating now (Milestone 10.5):**
 
-> 🎯 **"A smaller army can win through tactics — holding chokepoints, protecting archers, and choosing targets wisely."**
+> 🎯 **"Active abilities make me time decisions — shield the bridge, charge a gap, volley a cluster."**
 
-**Next up:** Playtest the unfair battle — tune defender HP, enemy count, or bridge width until tactics can win.
+**Next up:** Playtest abilities repeatedly. If timing Volley and Shield Wall feels good, proceed to Milestone 11 (ability polish + UI).
