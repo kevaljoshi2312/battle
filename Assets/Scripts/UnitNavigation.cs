@@ -108,4 +108,14 @@ public static class UnitNavigation
 
         return closest;
     }
+
+    public static Vector3 ClampToBridgeApproach(Vector3 destination, Vector3 from)
+    {
+        if (from.z <= BattlefieldLayout.PlayerDefenderZ)
+            return destination;
+
+        float halfWidth = BattlefieldLayout.BridgeApproachHalfWidth;
+        destination.x = Mathf.Clamp(destination.x, -halfWidth, halfWidth);
+        return destination;
+    }
 }

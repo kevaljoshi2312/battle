@@ -13,6 +13,7 @@ public class BattleManager : MonoBehaviour
     void Awake()
     {
         BuildUI();
+        EnsureTargetingDebugUI();
     }
 
     void Update()
@@ -150,5 +151,11 @@ public class BattleManager : MonoBehaviour
         GameObject eventSystemObject = new GameObject("EventSystem");
         eventSystemObject.AddComponent<EventSystem>();
         eventSystemObject.AddComponent<InputSystemUIInputModule>();
+    }
+
+    void EnsureTargetingDebugUI()
+    {
+        if (GetComponent<TargetingDebugUI>() == null)
+            gameObject.AddComponent<TargetingDebugUI>();
     }
 }

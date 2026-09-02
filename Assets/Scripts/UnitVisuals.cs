@@ -34,6 +34,17 @@ public static class UnitVisuals
 
     public static bool IsRangedAttack(float attackRange) => attackRange > MeleeAttackRangeMax;
 
+    public const float MeleeChaseStopDistance = 1f;
+    public const float RangedChaseStopDistanceInset = 2f;
+
+    public static float GetChaseStopDistance(float attackRange)
+    {
+        if (IsRangedAttack(attackRange))
+            return attackRange - RangedChaseStopDistanceInset;
+
+        return MeleeChaseStopDistance;
+    }
+
     public const float MoveSpeedScale = 0.5f;
     public const float BaseTurnSpeed = 720f;
     public static float TurnSpeed => BaseTurnSpeed * MoveSpeedScale;
@@ -46,12 +57,44 @@ public static class UnitVisuals
     public static float EnemyMoveSpeed => BaseEnemyMoveSpeed * MoveSpeedScale;
 
     // NavMesh agent + combat approach spacing (reduces stacking in chokepoints).
+    // Nav bake settings (Project Settings → Navigation → Agents) must match these values.
     public static float NavAgentRadius => CapsuleWorldRadius;
+    public static float NavBakeAgentHeight => CapsuleHeight * 2f;
     public const float ApproachSlotSpacing = 0.45f;
     public const int ApproachSlotCount = 9;
     public const float MoveOrderInterval = 0.25f;
     public const float MoveDestinationEpsilon = 0.4f;
     public const float NavAgentStoppingDistance = 0.4f;
+
+    // Row span: (n−1)·D + (n−1)·offset. Add one diameter for full footprint edge-to-edge.
+    public static float FormationUnitDiameter => CapsuleWorldRadius * 2f;
+    public const float FormationOffset = 0.1f;
+    public static float FormationCenterSpacing => FormationUnitDiameter + FormationOffset;
+
+    public static float FormationWidth(int unitCount)
+    {
+        if (unitCount <= 1)
+            return 0f;
+
+        return (unitCount - 1) * FormationUnitDiameter + (unitCount - 1) * FormationOffset;
+    }
+
+    public static float FormationFootprintWidth(int unitCount)
+    {
+        if (unitCount <= 0)
+            return 0f;
+
+        return FormationWidth(unitCount) + FormationUnitDiameter;
+    }
+
+    // Bridge inner width: n·D + (n+1)·offset (end offsets + gaps between units).
+    public static float FormationBridgeWidth(int unitCount)
+    {
+        if (unitCount <= 0)
+            return 0f;
+
+        return unitCount * FormationUnitDiameter + (unitCount + 1) * FormationOffset;
+    }
 
     public static float LineX(int index, int count)
     {

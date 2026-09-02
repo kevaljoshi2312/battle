@@ -44,6 +44,9 @@ public class DeathEffect : MonoBehaviour
 
         HealthBar healthBar = GetComponent<HealthBar>();
         healthBar?.Hide();
+
+        UnitWorldLabel worldLabel = GetComponent<UnitWorldLabel>();
+        worldLabel?.Hide();
     }
 
     IEnumerator PlayRoutine()

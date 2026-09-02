@@ -6,6 +6,8 @@ public class PlayerController : MonoBehaviour
 {
     readonly List<UnitSelection> selectedUnits = new List<UnitSelection>();
 
+    public IReadOnlyList<UnitSelection> SelectedUnits => selectedUnits;
+
     void Update()
     {
         PruneDestroyedUnits();

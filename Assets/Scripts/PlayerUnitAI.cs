@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class PlayerUnitAI : MonoBehaviour
 {
-    [SerializeField] float stopDistanceFactor = 0.85f;
-    [SerializeField] float archerStopDistanceFactor = 0.95f;
     [SerializeField] float defenderBlockRadius = 1.1f;
 
     UnitMovement movement;
@@ -123,11 +121,7 @@ public class PlayerUnitAI : MonoBehaviour
         if (combat == null)
             return 0f;
 
-        float factor = unit != null && unit.Type == UnitType.Archer
-            ? archerStopDistanceFactor
-            : stopDistanceFactor;
-
-        return combat.AttackRange * factor;
+        return UnitVisuals.GetChaseStopDistance(combat.AttackRange);
     }
 
     Vector3 GetChasePosition(Vector3 targetPosition, float stopDistance)

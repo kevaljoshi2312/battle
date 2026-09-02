@@ -3,7 +3,6 @@ using UnityEngine;
 public class EnemyAI : MonoBehaviour
 {
     [SerializeField] float detectRange = 25f;
-    [SerializeField] float stopDistanceFactor = 0.85f;
 
     UnitMovement movement;
     UnitCombat combat;
@@ -13,6 +12,9 @@ public class EnemyAI : MonoBehaviour
     Health currentTarget;
     Vector3 lastMoveDestination;
     float lastMoveOrderTime;
+
+    public Health PrimaryTarget => primaryTarget;
+    public Health CurrentTarget => currentTarget;
 
     void Awake()
     {
@@ -65,13 +67,15 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        float stopDistance = combat.AttackRange * stopDistanceFactor;
+        float stopDistance = UnitVisuals.GetChaseStopDistance(combat.AttackRange);
         Vector3 chasePosition = UnitNavigation.GetSurroundChasePosition(
             transform.position,
             targetTransform.position,
             stopDistance,
             combat.AttackRange,
             GetInstanceID());
+
+        chasePosition = UnitNavigation.ClampToBridgeApproach(chasePosition, transform.position);
 
         if (!UnitNavigation.ShouldIssueMoveOrder(chasePosition, lastMoveDestination, lastMoveOrderTime))
             return;

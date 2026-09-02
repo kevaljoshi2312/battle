@@ -12,17 +12,16 @@ public static class Milestone10Setup
 
     static readonly (string Name, UnitType Type, Vector3 Position)[] PlayerUnits =
     {
-        ("Archer_1", UnitType.Archer, ArcherPosition(0)),
-        ("Archer_2", UnitType.Archer, ArcherPosition(1)),
-        ("Archer_3", UnitType.Archer, ArcherPosition(2)),
-        ("Archer_4", UnitType.Archer, ArcherPosition(3)),
-        ("Defender_Bridge_1", UnitType.Defender, DefenderBridgePosition(0)),
-        ("Defender_Bridge_2", UnitType.Defender, DefenderBridgePosition(1)),
-        ("Defender_Bridge_3", UnitType.Defender, DefenderBridgePosition(2)),
-        ("Defender_Bridge_4", UnitType.Defender, DefenderBridgePosition(3)),
-        ("Defender_Back", UnitType.Defender, UnitPosition(0f, BattlefieldLayout.PlayerAttackerZ)),
-        ("Attacker_1", UnitType.Attacker, UnitPosition(-0.6f, BattlefieldLayout.PlayerAttackerZ - 1f)),
-        ("Attacker_2", UnitType.Attacker, UnitPosition(0.6f, BattlefieldLayout.PlayerAttackerZ - 1f)),
+        ("Archer_1", UnitType.Archer, FormationPosition(0, 3, BattlefieldLayout.PlayerBackZ)),
+        ("Archer_2", UnitType.Archer, FormationPosition(1, 3, BattlefieldLayout.PlayerBackZ)),
+        ("Archer_3", UnitType.Archer, FormationPosition(2, 3, BattlefieldLayout.PlayerBackZ)),
+        ("Archer_4", UnitType.Archer, FormationPosition(0, 1, BattlefieldLayout.PlayerArcherSecondRowZ)),
+        ("Defender_Bridge_1", UnitType.Defender, FormationPosition(0, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
+        ("Defender_Bridge_2", UnitType.Defender, FormationPosition(1, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
+        ("Defender_Bridge_3", UnitType.Defender, FormationPosition(2, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
+        ("Defender_Reserve_1", UnitType.Defender, FormationPosition(0, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
+        ("Defender_Reserve_2", UnitType.Defender, FormationPosition(1, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
+        ("Defender_Reserve_3", UnitType.Defender, FormationPosition(2, BattlefieldLayout.ReserveDefenderCount, BattlefieldLayout.PlayerDefenderReserveZ)),
     };
 
     [MenuItem(MenuPath)]
@@ -39,7 +38,7 @@ public static class Milestone10Setup
         BattleSceneSetup.ConfigureMainCamera(BattlefieldLayout.BridgeCameraOrthographicSize);
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Milestone 10 ready! Bridge chokepoint, NavMesh pathing, 11 vs 18 unfair battle.");
+        Debug.Log("Milestone 10 ready! Bridge chokepoint, NavMesh pathing, 10 vs 18 unfair battle.");
     }
 
     static Vector3 UnitPosition(float x, float z)
@@ -47,18 +46,10 @@ public static class Milestone10Setup
         return new Vector3(x, 1f, z);
     }
 
-    static Vector3 ArcherPosition(int index)
+    static Vector3 FormationPosition(int index, int countInRow, float z)
     {
-        const int archerCount = 4;
-        float x = UnitVisuals.LineX(index, archerCount, BattlefieldLayout.FormationColumnSpacing);
-        return UnitPosition(x, BattlefieldLayout.PlayerBackZ);
-    }
-
-    static Vector3 DefenderBridgePosition(int index)
-    {
-        const int defenderCount = 4;
-        float x = UnitVisuals.LineX(index, defenderCount, BattlefieldLayout.FormationColumnSpacing);
-        return UnitPosition(x, BattlefieldLayout.PlayerDefenderZ);
+        float x = UnitVisuals.LineX(index, countInRow, UnitVisuals.FormationCenterSpacing);
+        return UnitPosition(x, z);
     }
 
     static void SetupBattlefield()
@@ -80,6 +71,12 @@ public static class Milestone10Setup
         CreateWall(battlefield.transform, "Wall_Right",
             new Vector3(BattlefieldLayout.RightWallX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.BridgeCenterZ),
             new Vector3(BattlefieldLayout.WallThickness, BattlefieldLayout.WallHeight, BattlefieldLayout.WallLength));
+        CreateFlankBarrier(battlefield.transform, "Flank_Left",
+            new Vector3(BattlefieldLayout.LeftFlankBarrierCenterX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.FlankBarrierCenterZ),
+            new Vector3(BattlefieldLayout.FlankBarrierWidth, BattlefieldLayout.WallHeight, BattlefieldLayout.FlankBarrierLength));
+        CreateFlankBarrier(battlefield.transform, "Flank_Right",
+            new Vector3(BattlefieldLayout.RightFlankBarrierCenterX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.FlankBarrierCenterZ),
+            new Vector3(BattlefieldLayout.FlankBarrierWidth, BattlefieldLayout.WallHeight, BattlefieldLayout.FlankBarrierLength));
     }
 
     static void ClearChildren(Transform parent)
@@ -129,6 +126,23 @@ public static class Milestone10Setup
         modifier.area = 1;
     }
 
+    static void CreateFlankBarrier(Transform parent, string name, Vector3 position, Vector3 scale)
+    {
+        GameObject barrier = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        barrier.name = name;
+        barrier.transform.SetParent(parent, false);
+        barrier.transform.position = position;
+        barrier.transform.localScale = scale;
+
+        Renderer renderer = barrier.GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+
+        NavMeshModifier modifier = barrier.AddComponent<NavMeshModifier>();
+        modifier.overrideArea = true;
+        modifier.area = 1;
+    }
+
     static void BakeNavMesh()
     {
         GameObject battlefield = GameObject.Find(BattlefieldName);
@@ -141,6 +155,7 @@ public static class Milestone10Setup
 
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+        // Uses Humanoid agent from Navigation settings (radius/height should match UnitVisuals).
         surface.BuildNavMesh();
         WarpAllUnitsToNavMesh();
     }
@@ -170,28 +185,32 @@ public static class Milestone10Setup
 
     static void SetupPlayerUnits()
     {
+        int displayId = 1;
         foreach ((string name, UnitType type, Vector3 position) in PlayerUnits)
-            CreatePlayerUnit(name, type, position);
+        {
+            CreatePlayerUnit(name, type, position, displayId);
+            displayId++;
+        }
     }
 
     static void SetupEnemies()
     {
-        const int enemyCount = 18;
-        for (int i = 0; i < enemyCount; i++)
-            CreateEnemy($"Enemy_{i + 1}", EnemySpawnPosition(i, enemyCount));
+        for (int i = 0; i < BattlefieldLayout.EnemyCount; i++)
+            CreateEnemy($"Enemy_{i + 1}", EnemySpawnPosition(i, BattlefieldLayout.EnemyCount), i + 1);
     }
 
     static Vector3 EnemySpawnPosition(int index, int count)
     {
-        int columns = BattlefieldLayout.EnemyColumns;
-        int row = index / columns;
-        int column = index % columns;
-        float x = UnitVisuals.LineX(column, columns, BattlefieldLayout.FormationColumnSpacing);
+        int unitsPerRow = BattlefieldLayout.MaxFormationUnitsPerRow;
+        int row = index / unitsPerRow;
+        int rowStart = row * unitsPerRow;
+        int unitsInRow = Mathf.Min(unitsPerRow, count - rowStart);
+        int column = index - rowStart;
         float z = BattlefieldLayout.EnemyLineZ + row * BattlefieldLayout.FormationRowSpacing;
-        return UnitPosition(x, z);
+        return FormationPosition(column, unitsInRow, z);
     }
 
-    static void CreatePlayerUnit(string name, UnitType type, Vector3 position)
+    static void CreatePlayerUnit(string name, UnitType type, Vector3 position, int displayId)
     {
         GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         unit.name = name;
@@ -208,16 +227,18 @@ public static class Milestone10Setup
 
         EnsureTeam(unit, Team.Player);
         unitProfile.Configure(type);
+        EnsureUnitIdentity(unit, Team.Player, displayId);
         EnsureUnitFacing(unit);
         SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, BattlefieldLayout.EnemyLineZ));
         EnsureHealthBar(unit);
+        EnsureUnitWorldLabel(unit);
         EnsureSelectionRing(unit);
         EnsureDamageFlash(unit);
         EnsureDeathEffect(unit);
         EditorUtility.SetDirty(unitProfile);
     }
 
-    static void CreateEnemy(string name, Vector3 position)
+    static void CreateEnemy(string name, Vector3 position, int displayId)
     {
         GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         enemy.name = name;
@@ -235,7 +256,9 @@ public static class Milestone10Setup
         EnsureTeam(enemy, Team.Enemy);
         EnsureHealth(enemy, 70);
         EnsureCombat(enemy, damage: 14, attackRange: 2f, autoAttack: true);
+        EnsureUnitIdentity(enemy, Team.Enemy, displayId);
         EnsureHealthBar(enemy);
+        EnsureUnitWorldLabel(enemy);
         EnsureDamageFlash(enemy);
         EnsureDeathEffect(enemy);
 
@@ -247,10 +270,16 @@ public static class Milestone10Setup
 
     static void EnsureUnitComponents()
     {
+        int nextPlayerId = 1;
+        int nextEnemyId = 1;
+
         foreach (Health health in Object.FindObjectsByType<Health>(FindObjectsSortMode.None))
         {
             if (health.GetComponent<HealthBar>() == null)
                 health.gameObject.AddComponent<HealthBar>();
+
+            if (health.GetComponent<UnitWorldLabel>() == null)
+                health.gameObject.AddComponent<UnitWorldLabel>();
 
             if (health.GetComponent<UnitFacing>() == null)
                 health.gameObject.AddComponent<UnitFacing>();
@@ -264,6 +293,12 @@ public static class Milestone10Setup
             UnitTeam unitTeam = health.GetComponent<UnitTeam>();
             if (unitTeam != null && unitTeam.Team == Team.Player && health.GetComponent<SelectionRing>() == null)
                 health.gameObject.AddComponent<SelectionRing>();
+
+            if (health.GetComponent<UnitIdentity>() == null && unitTeam != null)
+            {
+                int id = unitTeam.Team == Team.Player ? nextPlayerId++ : nextEnemyId++;
+                EnsureUnitIdentity(health.gameObject, unitTeam.Team, id);
+            }
         }
     }
 
@@ -285,6 +320,9 @@ public static class Milestone10Setup
 
         if (manager.GetComponent<BattleManager>() == null)
             manager.AddComponent<BattleManager>();
+
+        if (manager.GetComponent<TargetingDebugUI>() == null)
+            manager.AddComponent<TargetingDebugUI>();
     }
 
     static void EnsureTeam(GameObject unit, Team team)
@@ -320,6 +358,22 @@ public static class Milestone10Setup
     {
         if (unit.GetComponent<HealthBar>() == null)
             unit.AddComponent<HealthBar>();
+    }
+
+    static void EnsureUnitWorldLabel(GameObject unit)
+    {
+        if (unit.GetComponent<UnitWorldLabel>() == null)
+            unit.AddComponent<UnitWorldLabel>();
+    }
+
+    static void EnsureUnitIdentity(GameObject unit, Team team, int displayId)
+    {
+        UnitIdentity identity = unit.GetComponent<UnitIdentity>();
+        if (identity == null)
+            identity = unit.AddComponent<UnitIdentity>();
+
+        identity.Configure(team, displayId);
+        EditorUtility.SetDirty(identity);
     }
 
     static void EnsureSelectionRing(GameObject unit)
