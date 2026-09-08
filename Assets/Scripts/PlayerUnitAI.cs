@@ -3,13 +3,16 @@ using UnityEngine;
 public class PlayerUnitAI : MonoBehaviour
 {
     [SerializeField] float defenderBlockRadius = 1.1f;
+    [SerializeField] float detectRange = 25f;
 
     UnitMovement movement;
     UnitCombat combat;
     Unit unit;
+    UnitTeam unitTeam;
     UnitFacing facing;
     CapsuleCollider capsuleCollider;
     Health attackTarget;
+    Health autoTarget;
     bool isHolding;
     bool isShieldWall;
     float defaultColliderRadius;
@@ -23,6 +26,7 @@ public class PlayerUnitAI : MonoBehaviour
         movement = GetComponent<UnitMovement>();
         combat = GetComponent<UnitCombat>();
         unit = GetComponent<Unit>();
+        unitTeam = GetComponent<UnitTeam>();
         facing = GetComponent<UnitFacing>();
         capsuleCollider = GetComponent<CapsuleCollider>();
 
@@ -34,18 +38,38 @@ public class PlayerUnitAI : MonoBehaviour
     {
         SquadAbility ability = GetComponent<SquadAbility>();
         if (isShieldWall || (ability != null && ability.IsCharging))
-            return;
-
-        if (attackTarget == null)
-            return;
-
-        if (!attackTarget.IsAlive)
         {
-            ClearAttackOrder();
+            autoTarget = null;
             return;
         }
 
-        ChaseAndAttack(attackTarget);
+        if (isHolding)
+        {
+            autoTarget = null;
+            return;
+        }
+
+        if (movement != null && movement.IsFollowingPlayerMoveOrder)
+        {
+            autoTarget = null;
+            return;
+        }
+
+        if (attackTarget != null)
+        {
+            if (!attackTarget.IsAlive)
+            {
+                ClearAttackOrder();
+            }
+            else
+            {
+                autoTarget = null;
+                RunCombatTick(attackTarget, useSurroundSlots: true);
+                return;
+            }
+        }
+
+        RunIdleAutoCombat();
     }
 
     void LateUpdate()
@@ -53,18 +77,14 @@ public class PlayerUnitAI : MonoBehaviour
         if (movement == null)
             return;
 
-        bool shouldAnchor = isShieldWall
-            || isHolding
-            || (attackTarget != null && combat != null && combat.IsInRange(attackTarget.transform))
-            || (attackTarget == null && !movement.HasMoveTarget);
-
-        movement.SetPositionAnchored(shouldAnchor);
+        movement.SetPositionAnchored(isShieldWall || isHolding);
     }
 
     public void HoldPosition()
     {
         isHolding = true;
         isShieldWall = false;
+        autoTarget = null;
         ClearAttackOrder();
         movement?.Stop();
         SetDefenderBlock(true);
@@ -74,6 +94,7 @@ public class PlayerUnitAI : MonoBehaviour
     {
         isHolding = true;
         isShieldWall = true;
+        autoTarget = null;
         ClearAttackOrder();
         movement?.Stop();
     }
@@ -89,12 +110,13 @@ public class PlayerUnitAI : MonoBehaviour
     {
         isHolding = false;
         isShieldWall = false;
+        autoTarget = null;
         GetComponent<SquadAbility>()?.CancelShieldWall();
         ClearAttackOrder();
         SetDefenderBlock(false);
         lastMoveDestination = position;
         lastMoveOrderTime = Time.time;
-        movement?.MoveTo(position);
+        movement?.MoveToCommand(position);
     }
 
     public void AttackTarget(Health target)
@@ -104,6 +126,7 @@ public class PlayerUnitAI : MonoBehaviour
 
         isHolding = false;
         isShieldWall = false;
+        autoTarget = null;
         GetComponent<SquadAbility>()?.CancelShieldWall();
         attackTarget = target;
         combat?.SetAttackTarget(target);
@@ -116,48 +139,40 @@ public class PlayerUnitAI : MonoBehaviour
         combat?.ClearAttackTarget();
     }
 
-    void ChaseAndAttack(Health target)
+    void RunIdleAutoCombat()
     {
-        if (combat == null)
-            return;
-
-        Transform targetTransform = target.transform;
-        facing?.FaceToward(targetTransform.position);
-
-        float stopDistance = GetStopDistance();
-
-        if (combat.IsInRange(targetTransform))
-        {
-            movement?.Stop();
-            combat.TryAttack(target);
-            return;
-        }
-
-        Vector3 chasePosition = GetChasePosition(targetTransform.position, stopDistance);
-        if (!UnitNavigation.ShouldIssueMoveOrder(chasePosition, lastMoveDestination, lastMoveOrderTime))
-            return;
-
-        lastMoveDestination = chasePosition;
-        lastMoveOrderTime = Time.time;
-        movement?.MoveTo(chasePosition);
-    }
-
-    float GetStopDistance()
-    {
-        if (combat == null)
-            return 0f;
-
-        return UnitVisuals.GetChaseStopDistance(combat.AttackRange);
-    }
-
-    Vector3 GetChasePosition(Vector3 targetPosition, float stopDistance)
-    {
-        return UnitNavigation.GetSurroundChasePosition(
+        Health target = UnitAutoCombat.ResolveTarget(
             transform.position,
-            targetPosition,
-            stopDistance,
-            combat.AttackRange,
-            GetInstanceID());
+            gameObject,
+            unitTeam,
+            detectRange,
+            preferredTarget: null);
+
+        autoTarget = RunCombatTick(target, useSurroundSlots: false);
+    }
+
+    Health RunCombatTick(Health preferredTarget, bool useSurroundSlots)
+    {
+        if (unitTeam == null || movement == null || combat == null)
+            return null;
+
+        Health target = UnitAutoCombat.ResolveTarget(
+            transform.position,
+            gameObject,
+            unitTeam,
+            detectRange,
+            preferredTarget);
+
+        return UnitAutoCombat.Tick(
+            gameObject,
+            movement,
+            combat,
+            facing,
+            target,
+            useSurroundSlots,
+            GetInstanceID(),
+            ref lastMoveDestination,
+            ref lastMoveOrderTime);
     }
 
     void SetDefenderBlock(bool enabled)
@@ -166,12 +181,5 @@ public class PlayerUnitAI : MonoBehaviour
             return;
 
         capsuleCollider.radius = enabled ? defenderBlockRadius : defaultColliderRadius;
-    }
-
-    static float HorizontalDistance(Vector3 from, Vector3 to)
-    {
-        Vector3 delta = to - from;
-        delta.y = 0f;
-        return delta.magnitude;
     }
 }

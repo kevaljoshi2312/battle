@@ -5,55 +5,39 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 
-public static class Milestone10Setup
+public static class BattleSetupShared
 {
-    const string MenuPath = "Battle/Setup Milestone 10 (Tactical Terrain)";
-    const string BattlefieldName = "Battlefield";
+    public const string BattlefieldName = "Battlefield";
 
-    static readonly (string Name, UnitType Type, Vector3 Position)[] PlayerUnits =
-    {
-        ("Archer_1", UnitType.Archer, FormationPosition(0, 3, BattlefieldLayout.PlayerBackZ)),
-        ("Archer_2", UnitType.Archer, FormationPosition(1, 3, BattlefieldLayout.PlayerBackZ)),
-        ("Archer_3", UnitType.Archer, FormationPosition(2, 3, BattlefieldLayout.PlayerBackZ)),
-        ("Archer_4", UnitType.Archer, FormationPosition(0, 1, BattlefieldLayout.PlayerArcherSecondRowZ)),
-        ("Defender_Bridge_1", UnitType.Defender, FormationPosition(0, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
-        ("Defender_Bridge_2", UnitType.Defender, FormationPosition(1, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
-        ("Defender_Bridge_3", UnitType.Defender, FormationPosition(2, BattlefieldLayout.BridgeDefenderCount, BattlefieldLayout.PlayerDefenderZ)),
-        ("Defender_Reserve_1", UnitType.Defender, FormationPosition(1, 1, BattlefieldLayout.PlayerDefenderReserveZ)),
-        ("Attacker_1", UnitType.Attacker, FormationPosition(0, 2, BattlefieldLayout.PlayerAttackerReserveZ)),
-        ("Attacker_2", UnitType.Attacker, FormationPosition(1, 2, BattlefieldLayout.PlayerAttackerReserveZ)),
-    };
-
-    [MenuItem(MenuPath)]
-    public static void Setup()
-    {
-        EnsurePlayerController();
-        EnsureBattleManager();
-        RemoveDebugComponents();
-        SetupBattlefield();
-        CleanupLegacyUnits();
-        SetupPlayerUnits();
-        SetupEnemies();
-        EnsureUnitComponents();
-        BakeNavMesh();
-        BattleSceneSetup.ConfigureMainCamera(BattlefieldLayout.BridgeCameraOrthographicSize);
-
-        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Milestone 10 ready! Bridge map (legacy) — 10 vs 18 static spawn.");
-    }
-
-    static Vector3 UnitPosition(float x, float z)
+    public static Vector3 UnitPosition(float x, float z)
     {
         return new Vector3(x, 1f, z);
     }
 
-    static Vector3 FormationPosition(int index, int countInRow, float z)
+    public static Vector3 FormationPosition(int index, int countInRow, float z)
     {
         float x = UnitVisuals.LineX(index, countInRow, UnitVisuals.FormationCenterSpacing);
         return UnitPosition(x, z);
     }
 
-    static void SetupBattlefield()
+    public static Vector3 EnemySpawnPosition(int index, int count)
+    {
+        int unitsPerRow = BattlefieldLayout.MaxFormationUnitsPerRow;
+        int row = index / unitsPerRow;
+        int rowStart = row * unitsPerRow;
+        int unitsInRow = Mathf.Min(unitsPerRow, count - rowStart);
+        int column = index - rowStart;
+        float z = BattlefieldLayout.EnemyLineZ + row * BattlefieldLayout.FormationRowSpacing;
+        return FormationPosition(column, unitsInRow, z);
+    }
+
+    public static void ClearChildren(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            Object.DestroyImmediate(parent.GetChild(i).gameObject);
+    }
+
+    public static GameObject EnsureBattlefieldRoot()
     {
         GameObject legacyGround = GameObject.Find("Ground");
         if (legacyGround != null)
@@ -64,39 +48,19 @@ public static class Milestone10Setup
             battlefield = new GameObject(BattlefieldName);
 
         ClearChildren(battlefield.transform);
-
-        CreateGround(battlefield.transform);
-        CreateWall(battlefield.transform, "Wall_Left",
-            new Vector3(BattlefieldLayout.LeftWallX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.BridgeCenterZ),
-            new Vector3(BattlefieldLayout.WallThickness, BattlefieldLayout.WallHeight, BattlefieldLayout.WallLength));
-        CreateWall(battlefield.transform, "Wall_Right",
-            new Vector3(BattlefieldLayout.RightWallX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.BridgeCenterZ),
-            new Vector3(BattlefieldLayout.WallThickness, BattlefieldLayout.WallHeight, BattlefieldLayout.WallLength));
-        CreateFlankBarrier(battlefield.transform, "Flank_Left",
-            new Vector3(BattlefieldLayout.LeftFlankBarrierCenterX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.FlankBarrierCenterZ),
-            new Vector3(BattlefieldLayout.FlankBarrierWidth, BattlefieldLayout.WallHeight, BattlefieldLayout.FlankBarrierLength));
-        CreateFlankBarrier(battlefield.transform, "Flank_Right",
-            new Vector3(BattlefieldLayout.RightFlankBarrierCenterX, BattlefieldLayout.WallHeight * 0.5f, BattlefieldLayout.FlankBarrierCenterZ),
-            new Vector3(BattlefieldLayout.FlankBarrierWidth, BattlefieldLayout.WallHeight, BattlefieldLayout.FlankBarrierLength));
-        BattleSetupShared.EnsureBattlefieldConfig(battlefield, bridgeChokepointEnabled: true);
+        return battlefield;
     }
 
-    static void ClearChildren(Transform parent)
+    public static void CreateGround(Transform parent, float planeScale = -1f)
     {
-        for (int i = parent.childCount - 1; i >= 0; i--)
-            Object.DestroyImmediate(parent.GetChild(i).gameObject);
-    }
+        if (planeScale < 0f)
+            planeScale = BattlefieldLayout.GroundPlaneScale;
 
-    static void CreateGround(Transform parent)
-    {
         GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
         ground.transform.SetParent(parent, false);
         ground.transform.position = Vector3.zero;
-        ground.transform.localScale = new Vector3(
-            BattlefieldLayout.GroundPlaneScale,
-            1f,
-            BattlefieldLayout.GroundPlaneScale);
+        ground.transform.localScale = new Vector3(planeScale, 1f, planeScale);
 
         Renderer renderer = ground.GetComponent<Renderer>();
         if (renderer != null)
@@ -107,7 +71,7 @@ public static class Milestone10Setup
         }
     }
 
-    static void CreateWall(Transform parent, string name, Vector3 position, Vector3 scale)
+    public static void CreateWall(Transform parent, string name, Vector3 position, Vector3 scale)
     {
         GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
         wall.name = name;
@@ -128,7 +92,7 @@ public static class Milestone10Setup
         modifier.area = 1;
     }
 
-    static void CreateFlankBarrier(Transform parent, string name, Vector3 position, Vector3 scale)
+    public static void CreateFlankBarrier(Transform parent, string name, Vector3 position, Vector3 scale)
     {
         GameObject barrier = GameObject.CreatePrimitive(PrimitiveType.Cube);
         barrier.name = name;
@@ -145,7 +109,17 @@ public static class Milestone10Setup
         modifier.area = 1;
     }
 
-    static void BakeNavMesh()
+    public static void EnsureBattlefieldConfig(GameObject battlefield, bool bridgeChokepointEnabled)
+    {
+        BattlefieldConfig config = battlefield.GetComponent<BattlefieldConfig>();
+        if (config == null)
+            config = battlefield.AddComponent<BattlefieldConfig>();
+
+        config.Configure(bridgeChokepointEnabled);
+        EditorUtility.SetDirty(config);
+    }
+
+    public static void BakeNavMesh()
     {
         GameObject battlefield = GameObject.Find(BattlefieldName);
         if (battlefield == null)
@@ -157,7 +131,6 @@ public static class Milestone10Setup
 
         surface.collectObjects = CollectObjects.Children;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-        // Uses Humanoid agent from Navigation settings (radius/height should match UnitVisuals).
         surface.BuildNavMesh();
         WarpAllUnitsToNavMesh();
     }
@@ -175,7 +148,7 @@ public static class Milestone10Setup
         }
     }
 
-    static void CleanupLegacyUnits()
+    public static void CleanupLegacyUnits()
     {
         GameObject legacySoldier = GameObject.Find("Soldier");
         if (legacySoldier != null)
@@ -185,31 +158,143 @@ public static class Milestone10Setup
             Object.DestroyImmediate(health.gameObject);
     }
 
-    static void SetupPlayerUnits()
+    public static void SetupPlayerUnits((string Name, UnitType Type, Vector3 Position)[] playerUnits)
     {
         int displayId = 1;
-        foreach ((string name, UnitType type, Vector3 position) in PlayerUnits)
+        foreach ((string name, UnitType type, Vector3 position) in playerUnits)
         {
             CreatePlayerUnit(name, type, position, displayId);
             displayId++;
         }
     }
 
-    static void SetupEnemies()
+    public static void SetupEnemies()
     {
         for (int i = 0; i < BattlefieldLayout.EnemyCount; i++)
             CreateEnemy($"Enemy_{i + 1}", EnemySpawnPosition(i, BattlefieldLayout.EnemyCount), i + 1);
     }
 
-    static Vector3 EnemySpawnPosition(int index, int count)
+    public static void SetupOpenFieldEnemies()
     {
-        int unitsPerRow = BattlefieldLayout.MaxFormationUnitsPerRow;
-        int row = index / unitsPerRow;
-        int rowStart = row * unitsPerRow;
-        int unitsInRow = Mathf.Min(unitsPerRow, count - rowStart);
-        int column = index - rowStart;
-        float z = BattlefieldLayout.EnemyLineZ + row * BattlefieldLayout.FormationRowSpacing;
-        return FormationPosition(column, unitsInRow, z);
+        int displayId = 1;
+
+        for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyFrontCount; i++)
+        {
+            CreateEnemy(
+                $"Enemy_Def_{i + 1}",
+                FormationPosition(i, BattlefieldLayout.OpenFieldEnemyFrontCount, BattlefieldLayout.OpenFieldEnemyDefenderZ),
+                displayId++,
+                maxHealth: 80,
+                faceTowardZ: BattlefieldLayout.OpenFieldPlayerDefenderZ);
+        }
+
+        for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyMidCount; i++)
+        {
+            CreateEnemy(
+                $"Enemy_Atk_{i + 1}",
+                FormationPosition(i, BattlefieldLayout.OpenFieldEnemyMidCount, BattlefieldLayout.OpenFieldEnemyAttackerZ),
+                displayId++,
+                faceTowardZ: BattlefieldLayout.OpenFieldPlayerDefenderZ);
+        }
+
+        for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyBackCount; i++)
+        {
+            CreateEnemyRanged(
+                $"Enemy_Arc_{i + 1}",
+                FormationPosition(i, BattlefieldLayout.OpenFieldEnemyBackCount, BattlefieldLayout.OpenFieldEnemyArcherZ),
+                displayId++);
+        }
+    }
+
+    public static void RemoveScenarioBattle()
+    {
+        GameObject manager = GameObject.Find("BattleManager");
+        if (manager == null)
+            return;
+
+        BattleScenario scenario = manager.GetComponent<BattleScenario>();
+        if (scenario != null)
+            Object.DestroyImmediate(scenario);
+
+        EnemySpawner spawner = manager.GetComponent<EnemySpawner>();
+        if (spawner != null)
+            Object.DestroyImmediate(spawner);
+
+        BattleWarningUI warning = manager.GetComponent<BattleWarningUI>();
+        if (warning != null)
+            Object.DestroyImmediate(warning);
+
+        EditorUtility.SetDirty(manager);
+    }
+
+    public static void SetupScenarioBattle()
+    {
+        GameObject manager = GameObject.Find("BattleManager");
+        if (manager == null)
+            return;
+
+        EnemySpawner existingSpawner = manager.GetComponent<EnemySpawner>();
+        if (existingSpawner != null)
+            Object.DestroyImmediate(existingSpawner);
+
+        BattleScenario existingScenario = manager.GetComponent<BattleScenario>();
+        if (existingScenario != null)
+            Object.DestroyImmediate(existingScenario);
+
+        BattleWarningUI existingWarning = manager.GetComponent<BattleWarningUI>();
+        if (existingWarning != null)
+            Object.DestroyImmediate(existingWarning);
+
+        manager.AddComponent<EnemySpawner>();
+        manager.AddComponent<BattleWarningUI>();
+        manager.AddComponent<BattleScenario>();
+        EditorUtility.SetDirty(manager);
+    }
+
+    public static void EnsurePlayerController()
+    {
+        GameObject controller = GameObject.Find("PlayerController");
+        if (controller == null)
+            controller = new GameObject("PlayerController");
+
+        if (controller.GetComponent<PlayerController>() == null)
+            controller.AddComponent<PlayerController>();
+    }
+
+    public static void EnsureBattleManager()
+    {
+        GameObject manager = GameObject.Find("BattleManager");
+        if (manager == null)
+            manager = new GameObject("BattleManager");
+
+        if (manager.GetComponent<BattleManager>() == null)
+            manager.AddComponent<BattleManager>();
+    }
+
+    public static void RemoveDebugComponents()
+    {
+        foreach (TargetingDebugUI debugUi in Object.FindObjectsByType<TargetingDebugUI>(FindObjectsSortMode.None))
+            Object.DestroyImmediate(debugUi);
+
+        if (BattleDebug.ShowWorldLabels)
+            return;
+
+        foreach (UnitWorldLabel label in Object.FindObjectsByType<UnitWorldLabel>(FindObjectsSortMode.None))
+            Object.DestroyImmediate(label);
+
+        foreach (GameObject root in EditorSceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            if (root.name.EndsWith("_WorldLabel"))
+                Object.DestroyImmediate(root);
+        }
+    }
+
+    public static void FinishSetup(float cameraOrthographicSize, string logMessage)
+    {
+        BakeNavMesh();
+        BattleSceneSetup.ConfigureMainCamera(cameraOrthographicSize);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log(logMessage);
     }
 
     static void CreatePlayerUnit(string name, UnitType type, Vector3 position, int displayId)
@@ -233,7 +318,7 @@ public static class Milestone10Setup
         unitProfile.Configure(type);
         EnsureUnitIdentity(unit, Team.Player, displayId);
         EnsureUnitFacing(unit);
-        SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, BattlefieldLayout.EnemyLineZ));
+        SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, BattlefieldLayout.OpenFieldEnemyDefenderZ));
         EnsureHealthBar(unit);
         EnsureUnitWorldLabel(unit);
         EnsureSelectionRing(unit);
@@ -242,7 +327,7 @@ public static class Milestone10Setup
         EditorUtility.SetDirty(unitProfile);
     }
 
-    static void CreateEnemy(string name, Vector3 position, int displayId)
+    static void CreateEnemy(string name, Vector3 position, int displayId, int maxHealth = 70, float faceTowardZ = float.NaN)
     {
         GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         enemy.name = name;
@@ -259,7 +344,7 @@ public static class Milestone10Setup
 
         EnsureTeam(enemy, Team.Enemy);
         UnitFacing.EnsureNose(enemy, Team.Enemy);
-        EnsureHealth(enemy, 70);
+        EnsureHealth(enemy, maxHealth);
         EnsureCombat(enemy, damage: 14, attackRange: 2f, autoAttack: true);
         EnsureUnitIdentity(enemy, Team.Enemy, displayId);
         EnsureHealthBar(enemy);
@@ -270,10 +355,42 @@ public static class Milestone10Setup
         enemy.AddComponent<UnitMovement>();
         enemy.AddComponent<EnemyAI>();
         EnsureUnitFacing(enemy);
-        SnapFacingToward(enemy, new Vector3(enemy.transform.position.x, 0f, BattlefieldLayout.PlayerBackZ));
+        float targetZ = float.IsNaN(faceTowardZ) ? BattlefieldLayout.PlayerBackZ : faceTowardZ;
+        SnapFacingToward(enemy, new Vector3(enemy.transform.position.x, 0f, targetZ));
     }
 
-    static void EnsureUnitComponents()
+    static void CreateEnemyRanged(string name, Vector3 position, int displayId)
+    {
+        GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        enemy.name = name;
+        enemy.transform.position = position;
+        enemy.transform.localScale = UnitVisuals.CapsuleScale;
+
+        Renderer renderer = enemy.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.color = new Color(0.95f, 0.35f, 0.35f);
+            renderer.sharedMaterial = material;
+        }
+
+        EnsureTeam(enemy, Team.Enemy);
+        UnitFacing.EnsureNose(enemy, Team.Enemy);
+        EnsureHealth(enemy, 60);
+        EnsureCombat(enemy, damage: 12, attackRange: 8f, autoAttack: true);
+        EnsureUnitIdentity(enemy, Team.Enemy, displayId);
+        EnsureHealthBar(enemy);
+        EnsureUnitWorldLabel(enemy);
+        EnsureDamageFlash(enemy);
+        EnsureDeathEffect(enemy);
+
+        enemy.AddComponent<UnitMovement>();
+        enemy.AddComponent<EnemyAI>();
+        EnsureUnitFacing(enemy);
+        SnapFacingToward(enemy, new Vector3(enemy.transform.position.x, 0f, BattlefieldLayout.OpenFieldPlayerDefenderZ));
+    }
+
+    public static void EnsureUnitComponents()
     {
         int nextPlayerId = 1;
         int nextEnemyId = 1;
@@ -314,44 +431,6 @@ public static class Milestone10Setup
                 int id = unitTeam.Team == Team.Player ? nextPlayerId++ : nextEnemyId++;
                 EnsureUnitIdentity(health.gameObject, unitTeam.Team, id);
             }
-        }
-    }
-
-    static void EnsurePlayerController()
-    {
-        GameObject controller = GameObject.Find("PlayerController");
-        if (controller == null)
-            controller = new GameObject("PlayerController");
-
-        if (controller.GetComponent<PlayerController>() == null)
-            controller.AddComponent<PlayerController>();
-    }
-
-    static void EnsureBattleManager()
-    {
-        GameObject manager = GameObject.Find("BattleManager");
-        if (manager == null)
-            manager = new GameObject("BattleManager");
-
-        if (manager.GetComponent<BattleManager>() == null)
-            manager.AddComponent<BattleManager>();
-    }
-
-    static void RemoveDebugComponents()
-    {
-        foreach (TargetingDebugUI debugUi in Object.FindObjectsByType<TargetingDebugUI>(FindObjectsSortMode.None))
-            Object.DestroyImmediate(debugUi);
-
-        if (BattleDebug.ShowWorldLabels)
-            return;
-
-        foreach (UnitWorldLabel label in Object.FindObjectsByType<UnitWorldLabel>(FindObjectsSortMode.None))
-            Object.DestroyImmediate(label);
-
-        foreach (GameObject root in EditorSceneManager.GetActiveScene().GetRootGameObjects())
-        {
-            if (root.name.EndsWith("_WorldLabel"))
-                Object.DestroyImmediate(root);
         }
     }
 

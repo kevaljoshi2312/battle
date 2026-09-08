@@ -25,12 +25,38 @@ public static class UnitVisuals
     public const float SelectionRingHeight = 0.04f;
 
     public const float MeleeAttackRangeMax = 2.5f;
-    public const float ArrowSpeed = 14f;
+    public const float ArrowSpeed = 16f;
     public const float ArrowHitDistance = 0.35f;
-    public const float ArrowSpawnHeight = 0.45f;
+    public const float ArrowSpawnHeight = 0.55f;
     public const float ArrowTargetHeight = 0.45f;
-    public static readonly Color ArrowColor = new Color(0.85f, 0.65f, 0.2f);
-    public static readonly Vector3 ArrowScale = new Vector3(0.04f, 0.04f, 0.35f);
+    public const float ArrowArcHeightScale = 0.18f;
+    public const float ArrowArcMinHeight = 0.35f;
+    public const float ArrowArcMaxHeight = 2.2f;
+
+    public const float ArrowShaftLength = 0.42f;
+    public const float ArrowShaftRadius = 0.012f;
+    public const float ArrowHeadLength = 0.1f;
+    public const float ArrowHeadWidth = 0.045f;
+    public const float ArrowFletchLength = 0.08f;
+    public const float ArrowFletchWidth = 0.025f;
+    public const float ArrowFletchHeight = 0.04f;
+    public const float ArrowFletchSpread = 0.028f;
+    public const float ArrowTrailDuration = 0.12f;
+    public const float ArrowTrailStartWidth = 0.035f;
+
+    public static readonly Color ArrowShaftColor = new Color(0.72f, 0.52f, 0.28f);
+    public static readonly Color ArrowHeadColor = new Color(0.72f, 0.74f, 0.78f);
+    public static readonly Color ArrowFletchColor = new Color(0.85f, 0.2f, 0.18f);
+    public static readonly Color ArrowTrailStartColor = new Color(1f, 0.92f, 0.55f, 0.55f);
+    public static readonly Color ArrowTrailEndColor = new Color(1f, 0.85f, 0.35f, 0f);
+
+    // Legacy alias used by older code paths.
+    public static readonly Color ArrowColor = ArrowShaftColor;
+
+    public const float FlankSideDamageMultiplier = 1.25f;
+    public const float FlankBackDamageMultiplier = 1.5f;
+    public const float FlankFrontDotThreshold = 0.45f;
+    public const float FlankBackDotThreshold = -0.45f;
 
     public static bool IsRangedAttack(float attackRange) => attackRange > MeleeAttackRangeMax;
 
@@ -58,7 +84,7 @@ public static class UnitVisuals
 
     // NavMesh agent + combat approach spacing (reduces stacking in chokepoints).
     // Nav bake settings (Project Settings → Navigation → Agents) must match these values.
-    public static float NavAgentRadius => CapsuleWorldRadius;
+    public const float NavAgentRadius = 0.3f;
     public static float NavBakeAgentHeight => CapsuleHeight * 2f;
     public const float ApproachSlotSpacing = 0.45f;
     public const int ApproachSlotCount = 9;

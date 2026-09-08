@@ -11,12 +11,16 @@ public class SquadAbility : MonoBehaviour
     const float ChargeCooldown = 12f;
     const float ChargeSpeedMultiplier = 2.2f;
     const int ChargeBonusDamage = 14;
-    const float ChargeVulnerableDuration = 3f;
-    const float ChargeVulnerableMultiplier = 1.5f;
 
     const float VolleyCooldown = 18f;
     const float VolleyRadius = 2.5f;
-    const int VolleyDamagePerArcher = 10;
+    const int VolleyDamagePerArcher = 5;
+
+    public static float ShieldWallDurationSeconds => ShieldWallDuration;
+    public static float ShieldWallCooldownSeconds => ShieldWallCooldown;
+    public static float ChargeDurationSeconds => ChargeDuration;
+    public static float ChargeCooldownSeconds => ChargeCooldown;
+    public static float VolleyCooldownSeconds => VolleyCooldown;
 
     Unit unit;
     Health health;
@@ -39,6 +43,72 @@ public class SquadAbility : MonoBehaviour
 
     public bool IsShieldWallActive => Time.time < shieldWallEndTime;
     public bool IsCharging => isCharging;
+
+    public bool IsPlayerUnitAlive()
+    {
+        if (health == null)
+            return false;
+
+        UnitTeam team = GetComponent<UnitTeam>();
+        return health.IsAlive && team != null && team.Team == Team.Player;
+    }
+
+    public SquadAbilitySnapshot GetSnapshot()
+    {
+        if (unit == null || health == null || !health.IsAlive)
+            return default;
+
+        float activeRemaining = 0f;
+        bool isActive = false;
+
+        if (IsShieldWallActive)
+        {
+            isActive = true;
+            activeRemaining = Mathf.Max(activeRemaining, shieldWallEndTime - Time.time);
+        }
+
+        if (IsCharging)
+        {
+            isActive = true;
+            activeRemaining = Mathf.Max(activeRemaining, chargeEndTime - Time.time);
+        }
+
+        float cooldownRemaining = GetCooldownRemaining();
+
+        return new SquadAbilitySnapshot(
+            hasLivingUnits: true,
+            isActive: isActive,
+            activeRemaining: activeRemaining,
+            cooldownRemaining: cooldownRemaining);
+    }
+
+    float GetCooldownRemaining()
+    {
+        if (unit == null)
+            return 0f;
+
+        return unit.Type switch
+        {
+            UnitType.Defender => Mathf.Max(0f, shieldWallCooldownEnd - Time.time),
+            UnitType.Attacker => Mathf.Max(0f, chargeCooldownEnd - Time.time),
+            UnitType.Archer => Mathf.Max(0f, volleyCooldownEnd - Time.time),
+            _ => 0f
+        };
+    }
+
+    public float GetCooldownTotal()
+    {
+        if (unit == null)
+            return 1f;
+
+        return unit.Type switch
+        {
+            UnitType.Defender => ShieldWallCooldown,
+            UnitType.Attacker => ChargeCooldown,
+            UnitType.Archer => VolleyCooldown,
+            _ => 1f
+        };
+    }
 
     void Awake()
     {
@@ -148,11 +218,6 @@ public class SquadAbility : MonoBehaviour
         unitAI?.ExitShieldWall();
     }
 
-    public void EndChargeVulnerability()
-    {
-        damageModifier.IncomingDamageMultiplier = 1f;
-    }
-
     void EndCharge(bool landedHit)
     {
         isCharging = false;
@@ -161,13 +226,8 @@ public class SquadAbility : MonoBehaviour
         if (movement != null)
             movement.Configure(defaultMoveSpeed);
 
-        if (landedHit)
-            damageModifier.IncomingDamageMultiplier = ChargeVulnerableMultiplier;
-        else
+        if (!landedHit)
             damageModifier.ConsumeBonusDamageOnHit();
-
-        if (landedHit)
-            Invoke(nameof(EndChargeVulnerability), ChargeVulnerableDuration);
     }
 
     void ApplyVolleyDamage(Vector3 center)
@@ -195,10 +255,11 @@ public class SquadAbility : MonoBehaviour
             Vector2 offset = Random.insideUnitCircle * VolleyRadius * 0.8f;
             Vector3 impactPoint = center + new Vector3(offset.x, 0f, offset.y);
 
+            Vector3 launchPosition = transform.position + Vector3.up * UnitVisuals.ArrowSpawnHeight;
             GameObject arrowObject = new GameObject("VolleyArrow");
-            arrowObject.transform.position = transform.position + Vector3.up * UnitVisuals.ArrowSpawnHeight;
+            arrowObject.transform.position = launchPosition;
             VolleyArrow volleyArrow = arrowObject.AddComponent<VolleyArrow>();
-            volleyArrow.Launch(impactPoint, UnitVisuals.ArrowSpeed);
+            volleyArrow.Launch(launchPosition, impactPoint, UnitVisuals.ArrowSpeed);
         }
     }
 

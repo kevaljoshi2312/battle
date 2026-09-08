@@ -100,6 +100,7 @@ public static class Milestone5Setup
             unitProfile = unit.AddComponent<Unit>();
 
         EnsureTeam(unit, Team.Player);
+        UnitFacing.EnsureNose(unit, Team.Player);
         unitProfile.Configure(type);
         EnsureUnitFacing(unit);
         SnapFacingToward(unit, new Vector3(unit.transform.position.x, 0f, UnitVisuals.EnemyLineZ));
@@ -140,6 +141,7 @@ public static class Milestone5Setup
         }
 
         EnsureTeam(enemy, Team.Enemy);
+        UnitFacing.EnsureNose(enemy, Team.Enemy);
         EnsureHealth(enemy, 80);
         EnsureCombat(enemy, damage: 15, attackRange: 2f, autoAttack: false);
         EnsureHealthBar(enemy);

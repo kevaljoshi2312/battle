@@ -2,54 +2,46 @@ using UnityEngine;
 
 public class VolleyArrow : MonoBehaviour
 {
-    Vector3 targetPosition;
+    Vector3 startPosition;
+    Vector3 endPosition;
     float speed;
+    float flightProgress;
 
-    public void Launch(Vector3 impactPoint, float travelSpeed)
+    public void Launch(Vector3 launchPosition, Vector3 impactPoint, float travelSpeed)
     {
-        targetPosition = impactPoint + Vector3.up * UnitVisuals.ArrowTargetHeight;
+        startPosition = launchPosition;
+        endPosition = impactPoint + Vector3.up * UnitVisuals.ArrowTargetHeight;
         speed = travelSpeed;
-        BuildVisual();
+        flightProgress = 0f;
+
+        transform.position = launchPosition;
+        ArrowVisual.BuildProjectile(transform);
+        UpdateFlight(0f);
     }
 
     void Update()
     {
-        Vector3 toTarget = targetPosition - transform.position;
-        float distance = toTarget.magnitude;
+        float horizontalDistance = ArrowTrajectory.GetHorizontalDistance(startPosition, endPosition);
+        float duration = ArrowTrajectory.GetFlightDuration(horizontalDistance, speed);
+        flightProgress += Time.deltaTime / duration;
 
-        if (distance <= UnitVisuals.ArrowHitDistance)
+        if (flightProgress >= 1f)
         {
             Destroy(gameObject);
             return;
         }
 
-        Vector3 direction = toTarget / distance;
-        transform.position += direction * (speed * Time.deltaTime);
-        transform.rotation = Quaternion.LookRotation(direction);
+        UpdateFlight(flightProgress);
     }
 
-    void BuildVisual()
+    void UpdateFlight(float progress)
     {
-        GameObject shaft = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        shaft.name = "Shaft";
-        shaft.transform.SetParent(transform, false);
-        shaft.transform.localScale = UnitVisuals.ArrowScale;
-        shaft.transform.localPosition = Vector3.forward * (UnitVisuals.ArrowScale.z * 0.5f);
+        float arcHeight = ArrowTrajectory.GetArcHeight(
+            ArrowTrajectory.GetHorizontalDistance(startPosition, endPosition));
 
-        Collider collider = shaft.GetComponent<Collider>();
-        if (collider != null)
-            Destroy(collider);
-
-        Renderer renderer = shaft.GetComponent<Renderer>();
-        if (renderer == null)
-            return;
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (shader == null)
-            shader = Shader.Find("Unlit/Color");
-
-        Material material = new Material(shader);
-        material.color = UnitVisuals.ArrowColor;
-        renderer.material = material;
+        transform.position = ArrowTrajectory.GetPoint(startPosition, endPosition, progress, arcHeight);
+        transform.rotation = Quaternion.LookRotation(
+            ArrowTrajectory.GetTangent(startPosition, endPosition, progress, arcHeight),
+            Vector3.up);
     }
 }

@@ -10,11 +10,13 @@ public class UnitMovement : MonoBehaviour
     Vector3 targetPosition;
     Vector3 anchoredPosition;
     bool hasTarget;
+    bool isPlayerMoveOrder;
     bool isPositionAnchored;
     int defaultAvoidancePriority;
 
     public float MoveSpeed => moveSpeed;
     public bool HasMoveTarget => hasTarget;
+    public bool IsFollowingPlayerMoveOrder => isPlayerMoveOrder && hasTarget;
 
     public void Configure(float speed)
     {
@@ -29,6 +31,7 @@ public class UnitMovement : MonoBehaviour
         {
             anchoredPosition = transform.position;
             hasTarget = false;
+            isPlayerMoveOrder = false;
 
             if (CanUseNavMesh())
             {
@@ -79,6 +82,23 @@ public class UnitMovement : MonoBehaviour
 
     public void MoveTo(Vector3 worldPosition)
     {
+        MoveToChase(worldPosition);
+    }
+
+    public void MoveToCommand(Vector3 worldPosition)
+    {
+        isPlayerMoveOrder = true;
+        BeginMove(worldPosition);
+    }
+
+    public void MoveToChase(Vector3 worldPosition)
+    {
+        isPlayerMoveOrder = false;
+        BeginMove(worldPosition);
+    }
+
+    void BeginMove(Vector3 worldPosition)
+    {
         isPositionAnchored = false;
         if (agent != null)
             agent.avoidancePriority = defaultAvoidancePriority;
@@ -97,6 +117,7 @@ public class UnitMovement : MonoBehaviour
     public void Stop()
     {
         hasTarget = false;
+        isPlayerMoveOrder = false;
 
         if (CanUseNavMesh())
         {
@@ -121,6 +142,7 @@ public class UnitMovement : MonoBehaviour
             if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
             {
                 hasTarget = false;
+                isPlayerMoveOrder = false;
                 agent.isStopped = true;
             }
 
@@ -135,7 +157,10 @@ public class UnitMovement : MonoBehaviour
         facing?.FaceToward(targetPosition);
 
         if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
+        {
             hasTarget = false;
+            isPlayerMoveOrder = false;
+        }
     }
 
     void LateUpdate()

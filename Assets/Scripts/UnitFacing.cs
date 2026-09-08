@@ -3,15 +3,14 @@ using UnityEngine;
 public class UnitFacing : MonoBehaviour
 {
     [SerializeField] float turnSpeed = 720f;
-    [SerializeField] float noseLocalZ = 0.55f;
-    [SerializeField] float noseScale = 0.22f;
 
-    const string NoseName = "FacingNose";
+    public const string NoseName = "FacingNose";
+    public const float NoseLocalZ = 0.55f;
+    public const float NoseScale = 0.22f;
 
     void Awake()
     {
         turnSpeed = UnitVisuals.TurnSpeed;
-        BuildNose();
     }
 
     public void FaceToward(Vector3 worldPosition)
@@ -40,25 +39,28 @@ public class UnitFacing : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(toTarget.normalized, Vector3.up);
     }
 
-    void BuildNose()
+    public static void EnsureNose(GameObject unit, Team team)
     {
-        Transform existing = transform.Find(NoseName);
-        if (existing != null)
-            Destroy(existing.gameObject);
+        if (unit == null)
+            return;
 
-        Transform legacyPivot = transform.Find("FacingPivot");
+        Transform existing = unit.transform.Find(NoseName);
+        if (existing != null)
+            return;
+
+        Transform legacyPivot = unit.transform.Find("FacingPivot");
         if (legacyPivot != null)
-            Destroy(legacyPivot.gameObject);
+            Object.DestroyImmediate(legacyPivot.gameObject);
 
         GameObject nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
         nose.name = NoseName;
-        nose.transform.SetParent(transform, false);
-        nose.transform.localPosition = new Vector3(0f, 0f, noseLocalZ);
-        nose.transform.localScale = Vector3.one * noseScale;
+        nose.transform.SetParent(unit.transform, false);
+        nose.transform.localPosition = new Vector3(0f, 0f, NoseLocalZ);
+        nose.transform.localScale = Vector3.one * NoseScale;
 
         Collider collider = nose.GetComponent<Collider>();
         if (collider != null)
-            Destroy(collider);
+            Object.DestroyImmediate(collider);
 
         Renderer renderer = nose.GetComponent<Renderer>();
         if (renderer != null)
@@ -68,18 +70,14 @@ public class UnitFacing : MonoBehaviour
                 shader = Shader.Find("Unlit/Color");
 
             Material material = new Material(shader);
-            material.color = GetNoseColor();
-            renderer.material = material;
+            material.color = GetNoseColor(team);
+            renderer.sharedMaterial = material;
         }
     }
 
-    Color GetNoseColor()
+    static Color GetNoseColor(Team team)
     {
-        UnitTeam unitTeam = GetComponent<UnitTeam>();
-        if (unitTeam == null)
-            return new Color(0.85f, 0.85f, 0.85f);
-
-        return unitTeam.Team == Team.Player
+        return team == Team.Player
             ? new Color(0.05f, 0.15f, 0.45f)
             : new Color(0.55f, 0.05f, 0.05f);
     }

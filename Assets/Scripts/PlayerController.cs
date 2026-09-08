@@ -4,9 +4,19 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    enum AbilityTargetingMode
+    {
+        None,
+        Charge,
+        Volley
+    }
+
     readonly List<UnitSelection> selectedUnits = new List<UnitSelection>();
+    AbilityTargetingMode abilityTargetingMode = AbilityTargetingMode.None;
 
     public IReadOnlyList<UnitSelection> SelectedUnits => selectedUnits;
+    public bool IsChargeTargetingPending => abilityTargetingMode == AbilityTargetingMode.Charge;
+    public bool IsVolleyTargetingPending => abilityTargetingMode == AbilityTargetingMode.Volley;
 
     public IReadOnlyList<UnitType> SelectedSquads => GetSelectedSquadTypes();
 
@@ -21,6 +31,7 @@ public class PlayerController : MonoBehaviour
         {
             if (Keyboard.current.hKey.wasPressedThisFrame)
             {
+                CancelAbilityTargeting();
                 ActivateShieldWall();
                 return;
             }
@@ -40,7 +51,15 @@ public class PlayerController : MonoBehaviour
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
+            CancelAbilityTargeting();
             DeselectAll();
+            return;
+        }
+
+        if (abilityTargetingMode != AbilityTargetingMode.None &&
+            Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            TryExecutePendingAbilityClick();
             return;
         }
 
@@ -57,6 +76,7 @@ public class PlayerController : MonoBehaviour
         UnitSelection clickedUnit = FindClosestPlayerUnit(hits);
         if (clickedUnit != null)
         {
+            CancelAbilityTargeting();
             HandleUnitClick(clickedUnit);
             return;
         }
@@ -81,90 +101,254 @@ public class PlayerController : MonoBehaviour
     {
         PruneDestroyedUnits();
         if (selectedUnits.Count == 0)
+        {
+            AbilityFeedback.Show("Select a squad first");
             return;
+        }
+
+        int activated = 0;
+        int held = 0;
+        int onCooldown = 0;
 
         foreach (UnitSelection unit in selectedUnits)
         {
             SquadAbility ability = unit.GetComponent<SquadAbility>();
+            Unit unitProfile = unit.GetComponent<Unit>();
+
             if (ability != null && ability.TryActivateShieldWall())
+            {
+                activated++;
                 continue;
+            }
+
+            if (unitProfile != null && unitProfile.Type == UnitType.Defender &&
+                ability != null && ability.GetSnapshot().CooldownRemaining > 0f)
+            {
+                onCooldown++;
+                continue;
+            }
 
             PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
             if (ai != null)
+            {
                 ai.HoldPosition();
+                held++;
+            }
         }
+
+        if (activated > 0)
+            AbilityFeedback.Show("Shield Wall active");
+        else if (onCooldown > 0)
+            AbilityFeedback.Show("Shield Wall on cooldown");
+        else if (held > 0)
+            AbilityFeedback.Show("Archers holding position");
     }
 
     void ActivateCharge()
     {
         PruneDestroyedUnits();
-        if (selectedUnits.Count == 0 || !TryGetWorldTargetFromMouse(out Vector3 destination, out Health enemyTarget))
+        if (selectedUnits.Count == 0)
+        {
+            AbilityFeedback.Show("Select Attackers first");
             return;
+        }
+
+        if (!HasSelectedAttackers())
+        {
+            AbilityFeedback.Show("Select Attackers for Charge (Q)");
+            return;
+        }
+
+        if (abilityTargetingMode == AbilityTargetingMode.Charge)
+        {
+            CancelAbilityTargeting();
+            AbilityFeedback.Show("Charge cancelled");
+            return;
+        }
+
+        CancelAbilityTargeting();
+        abilityTargetingMode = AbilityTargetingMode.Charge;
+        AbilityFeedback.Show("Click enemy or ground to charge", 4f);
+    }
+
+    void TryExecutePendingAbilityClick()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+        if (hits.Length == 0)
+            return;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        if (abilityTargetingMode == AbilityTargetingMode.Charge)
+        {
+            Health enemyTarget = FindClosestEnemy(hits);
+            if (enemyTarget != null)
+            {
+                ExecuteCharge(enemyTarget.transform.position, enemyTarget);
+                CancelAbilityTargeting();
+                return;
+            }
+
+            if (TryFindGroundPoint(hits, out Vector3 groundPoint))
+            {
+                ExecuteCharge(groundPoint, null);
+                CancelAbilityTargeting();
+            }
+
+            return;
+        }
+
+        if (abilityTargetingMode == AbilityTargetingMode.Volley)
+        {
+            Health enemyTarget = FindClosestEnemy(hits);
+            if (enemyTarget != null)
+            {
+                ExecuteVolley(enemyTarget.transform.position);
+                CancelAbilityTargeting();
+                return;
+            }
+
+            if (TryFindGroundPoint(hits, out Vector3 groundPoint))
+            {
+                ExecuteVolley(groundPoint);
+                CancelAbilityTargeting();
+            }
+        }
+    }
+
+    void ExecuteCharge(Vector3 destination, Health enemyTarget)
+    {
+        int activated = 0;
+        int onCooldown = 0;
 
         foreach (UnitSelection unit in selectedUnits)
         {
             SquadAbility ability = unit.GetComponent<SquadAbility>();
-            ability?.TryActivateCharge(destination, enemyTarget);
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (ability == null || unitProfile == null || unitProfile.Type != UnitType.Attacker)
+                continue;
+
+            if (ability.TryActivateCharge(destination, enemyTarget))
+            {
+                activated++;
+                continue;
+            }
+
+            if (ability.GetSnapshot().CooldownRemaining > 0f || ability.IsCharging)
+                onCooldown++;
         }
+
+        if (activated > 0)
+            AbilityFeedback.Show("Charge!");
+        else if (onCooldown > 0)
+            AbilityFeedback.Show("Charge on cooldown");
+    }
+
+    void CancelAbilityTargeting()
+    {
+        abilityTargetingMode = AbilityTargetingMode.None;
+    }
+
+    bool HasSelectedAttackers()
+    {
+        foreach (UnitSelection unit in selectedUnits)
+        {
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (unitProfile != null && unitProfile.Type == UnitType.Attacker)
+                return true;
+        }
+
+        return false;
     }
 
     void ActivateVolley()
     {
         PruneDestroyedUnits();
-        if (selectedUnits.Count == 0 || !TryGetGroundPointFromMouse(out Vector3 volleyCenter))
+        if (selectedUnits.Count == 0)
+        {
+            AbilityFeedback.Show("Select Archers first");
             return;
+        }
+
+        if (!HasSelectedArchers())
+        {
+            AbilityFeedback.Show("Select Archers for Volley (W)");
+            return;
+        }
+
+        if (abilityTargetingMode == AbilityTargetingMode.Volley)
+        {
+            CancelAbilityTargeting();
+            AbilityFeedback.Show("Volley cancelled");
+            return;
+        }
+
+        CancelAbilityTargeting();
+        abilityTargetingMode = AbilityTargetingMode.Volley;
+        AbilityFeedback.Show("Click ground or enemy to volley", 4f);
+    }
+
+    void ExecuteVolley(Vector3 volleyCenter)
+    {
+        int activated = 0;
+        int onCooldown = 0;
 
         foreach (UnitSelection unit in selectedUnits)
         {
             SquadAbility ability = unit.GetComponent<SquadAbility>();
-            ability?.TryActivateVolley(volleyCenter);
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (ability == null || unitProfile == null || unitProfile.Type != UnitType.Archer)
+                continue;
+
+            if (ability.TryActivateVolley(volleyCenter))
+            {
+                activated++;
+                continue;
+            }
+
+            if (ability.GetSnapshot().CooldownRemaining > 0f)
+                onCooldown++;
         }
+
+        if (activated > 0)
+            AbilityFeedback.Show("Volley!");
+        else if (onCooldown > 0)
+            AbilityFeedback.Show("Volley on cooldown");
     }
 
-    bool TryGetWorldTargetFromMouse(out Vector3 destination, out Health enemyTarget)
+    bool HasSelectedArchers()
     {
-        destination = default;
-        enemyTarget = null;
-
-        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-        RaycastHit[] hits = Physics.RaycastAll(ray);
-        if (hits.Length == 0)
-            return false;
-
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-        enemyTarget = FindClosestEnemy(hits);
-
-        if (enemyTarget != null)
+        foreach (UnitSelection unit in selectedUnits)
         {
-            destination = enemyTarget.transform.position;
-            return true;
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (unitProfile != null && unitProfile.Type == UnitType.Archer)
+                return true;
         }
 
-        return TryFindGroundPoint(hits, out destination);
-    }
-
-    bool TryGetGroundPointFromMouse(out Vector3 point)
-    {
-        point = default;
-        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-        RaycastHit[] hits = Physics.RaycastAll(ray);
-        if (hits.Length == 0)
-            return false;
-
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-        return TryFindGroundPoint(hits, out point);
+        return false;
     }
 
     void AttackWithSelectedUnits(Health target)
     {
         PruneDestroyedUnits();
+        HashSet<UnitType> focusedSquads = new HashSet<UnitType>();
 
         foreach (UnitSelection unit in selectedUnits)
         {
             PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
             if (ai != null)
                 ai.AttackTarget(target);
+
+            Unit unitProfile = unit.GetComponent<Unit>();
+            if (unitProfile != null)
+                focusedSquads.Add(unitProfile.Type);
         }
+
+        foreach (UnitType squadType in focusedSquads)
+            FocusFireRegistry.SetFocus(squadType, target);
+
+        AbilityFeedback.Show($"Focus fire: {UnitIdentity.GetLabel(target)}", 2.5f);
     }
 
     void MoveSelectedUnitsTo(Vector3 destination)
@@ -212,6 +396,10 @@ public class PlayerController : MonoBehaviour
 
     static void IssueMoveOrder(UnitSelection unit, Vector3 destination)
     {
+        Unit unitProfile = unit.GetComponent<Unit>();
+        if (unitProfile != null)
+            FocusFireRegistry.SetFocus(unitProfile.Type, null);
+
         PlayerUnitAI ai = unit.GetComponent<PlayerUnitAI>();
         if (ai != null)
         {
@@ -424,6 +612,7 @@ public class PlayerController : MonoBehaviour
 
     void DeselectAll()
     {
+        CancelAbilityTargeting();
         PruneDestroyedUnits();
 
         foreach (UnitSelection unit in selectedUnits)

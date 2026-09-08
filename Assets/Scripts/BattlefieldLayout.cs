@@ -20,6 +20,7 @@ public static class BattlefieldLayout
 
     // Bridge corridor: n·D + (n+1)·offset between wall inner faces.
     public const int BridgeDefenderCount = 3;
+    public const int OpenBattleDefenderCount = 4;
     public const int ReserveDefenderCount = 3;
 
     public static float BridgeWidth =>
@@ -52,8 +53,26 @@ public static class BattlefieldLayout
         BridgeCorridorInnerHalfWidth - UnitVisuals.CapsuleWorldRadius;
 
     public const float GroundPlaneScale = 5f;
+    public const float OpenFieldGroundPlaneScale = 6.5f;
     public const float BridgeCameraOrthographicSize = 7f;
+    public const float OpenBattleCameraOrthographicSize = 9f;
 
     public const float FormationRowSpacing = 0.75f;
     public const int EnemyCount = 18;
+
+    // Milestone 11 — open field (no bridge, wide spacing)
+    public const int OpenFieldSquadSize = 3;
+    public const float OpenFieldPlayerDefenderZ = -2.5f;
+    public const float OpenFieldPlayerAttackerZ = -6f;
+    public const float OpenFieldPlayerArcherZ = -10f;
+    public const float OpenFieldEnemyDefenderZ = 2.5f;
+    public const float OpenFieldEnemyAttackerZ = 6f;
+    public const float OpenFieldEnemyArcherZ = 9.5f;
+    public const int OpenFieldEnemyFrontCount = 3;
+    public const int OpenFieldEnemyMidCount = 4;
+    public const int OpenFieldEnemyBackCount = 3;
+
+    public const float LeftFlankSpawnCenterX = -7.5f;
+    public const float LeftFlankSpawnCenterZ = 2.5f;
+    public const float BridgeReinforcementCenterZ = 1.5f;
 }

@@ -11,6 +11,8 @@ public class UnitCombat : MonoBehaviour
     UnitTeam unitTeam;
     UnitFacing facing;
     Health focusTarget;
+    EnemyAI enemyAI;
+    PlayerUnitAI playerUnitAI;
 
     public float AttackRange => attackRange;
 
@@ -36,10 +38,16 @@ public class UnitCombat : MonoBehaviour
         attackCooldown = UnitVisuals.AttackCooldown;
         unitTeam = GetComponent<UnitTeam>();
         facing = GetComponent<UnitFacing>();
+        enemyAI = GetComponent<EnemyAI>();
+        playerUnitAI = GetComponent<PlayerUnitAI>();
     }
 
     void Update()
     {
+        // EnemyAI / PlayerUnitAI own targeting and attacks.
+        if (enemyAI != null || playerUnitAI != null)
+            return;
+
         Health target = GetAttackTarget();
         if (target == null)
             return;
@@ -107,7 +115,24 @@ public class UnitCombat : MonoBehaviour
             }
         }
 
+        int baseDamage = totalDamage;
+        totalDamage = FlankingCombat.ApplyFlankingDamage(
+            totalDamage,
+            transform.position,
+            target,
+            out FlankType flankType);
+
+        if (unitTeam != null && unitTeam.Team == Team.Player)
+            ShowFlankFeedback(flankType);
+
         target.TakeDamage(totalDamage);
+    }
+
+    void ShowFlankFeedback(FlankType flankType)
+    {
+        string label = FlankingCombat.GetFlankLabel(flankType);
+        if (!string.IsNullOrEmpty(label))
+            AbilityFeedback.Show(label, 1.2f);
     }
 
     void FireProjectile(Health target)
@@ -115,7 +140,14 @@ public class UnitCombat : MonoBehaviour
         Vector3 spawnPosition = transform.position + Vector3.up * UnitVisuals.ArrowSpawnHeight;
         GameObject arrowObject = new GameObject("Arrow");
         Arrow arrow = arrowObject.AddComponent<Arrow>();
-        arrow.Launch(spawnPosition, target, damage, UnitVisuals.ArrowSpeed);
+        Team team = unitTeam != null ? unitTeam.Team : Team.Player;
+        arrow.Launch(
+            spawnPosition,
+            target,
+            damage,
+            UnitVisuals.ArrowSpeed,
+            team,
+            showFlankFeedback: team == Team.Player);
     }
 
     Health FindNearestEnemyInRange()

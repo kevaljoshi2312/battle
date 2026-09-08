@@ -57,6 +57,44 @@ public static class UnitNavigation
         return result < 0 ? result + count : result;
     }
 
+    static float HorizontalDistance(Vector3 from, Vector3 to)
+    {
+        Vector3 delta = to - from;
+        delta.y = 0f;
+        return delta.magnitude;
+    }
+
+    public static Health FindClosestOpponent(
+        Vector3 from,
+        Team myTeam,
+        GameObject exclude,
+        float maxRange)
+    {
+        Health closest = null;
+        float closestDistanceSq = maxRange * maxRange;
+
+        foreach (Health health in Object.FindObjectsByType<Health>(FindObjectsSortMode.None))
+        {
+            if (!health.IsAlive || health.gameObject == exclude)
+                continue;
+
+            UnitTeam otherTeam = health.GetComponent<UnitTeam>();
+            if (otherTeam == null || otherTeam.Team == myTeam)
+                continue;
+
+            Vector3 delta = health.transform.position - from;
+            delta.y = 0f;
+            float distanceSq = delta.sqrMagnitude;
+            if (distanceSq >= closestDistanceSq)
+                continue;
+
+            closest = health;
+            closestDistanceSq = distanceSq;
+        }
+
+        return closest;
+    }
+
     public static Health FindBlockingOpponent(
         Vector3 from,
         Health focusTarget,
@@ -111,11 +149,26 @@ public static class UnitNavigation
 
     public static Vector3 ClampToBridgeApproach(Vector3 destination, Vector3 from)
     {
+        if (!BattlefieldConfig.IsBridgeChokepointEnabled)
+            return destination;
+
         if (from.z <= BattlefieldLayout.PlayerDefenderZ)
             return destination;
 
         float halfWidth = BattlefieldLayout.BridgeApproachHalfWidth;
         destination.x = Mathf.Clamp(destination.x, -halfWidth, halfWidth);
         return destination;
+    }
+
+    public static Vector3 GetDirectChasePosition(Vector3 from, Vector3 targetPosition, float stopDistance)
+    {
+        Vector3 toTarget = targetPosition - from;
+        toTarget.y = 0f;
+
+        float distance = toTarget.magnitude;
+        if (distance <= stopDistance || distance <= Mathf.Epsilon)
+            return from;
+
+        return targetPosition - toTarget.normalized * stopDistance;
     }
 }

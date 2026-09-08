@@ -29,8 +29,17 @@ public class BattleManager : MonoBehaviour
 
         if (!IsTeamAlive(Team.Player))
             EndBattle("Defeat");
-        else if (!IsTeamAlive(Team.Enemy))
+        else if (!IsTeamAlive(Team.Enemy) && AllEnemiesDefeated())
             EndBattle("Victory");
+    }
+
+    static bool AllEnemiesDefeated()
+    {
+        BattleScenario scenario = FindAnyObjectByType<BattleScenario>();
+        if (scenario != null && !scenario.AllWavesSpawned)
+            return false;
+
+        return !IsTeamAlive(Team.Enemy);
     }
 
     static bool IsTeamAlive(Team team)
@@ -147,6 +156,9 @@ public class BattleManager : MonoBehaviour
         buttonLabelRect.offsetMax = Vector2.zero;
 
         resultPanel.SetActive(false);
+
+        if (GetComponent<AbilityBarUI>() == null)
+            gameObject.AddComponent<AbilityBarUI>();
     }
 
     static void EnsureEventSystem()
