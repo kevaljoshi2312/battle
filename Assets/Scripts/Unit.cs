@@ -19,7 +19,7 @@ public class Unit : MonoBehaviour
 
     void ApplyStats()
     {
-        UnitStatBlock stats = UnitStatBlock.For(unitType);
+        UnitStats stats = UnitStats.For(unitType);
 
         Health health = GetComponent<Health>();
         if (health != null)
@@ -45,7 +45,7 @@ public class Unit : MonoBehaviour
     }
 }
 
-readonly struct UnitStatBlock
+public readonly struct UnitStats
 {
     public int MaxHealth { get; }
     public int Armor { get; }
@@ -55,7 +55,7 @@ readonly struct UnitStatBlock
     public Color Color { get; }
     public bool AutoAttack { get; }
 
-    UnitStatBlock(
+    UnitStats(
         int maxHealth,
         int armor,
         int damage,
@@ -73,11 +73,11 @@ readonly struct UnitStatBlock
         AutoAttack = autoAttack;
     }
 
-    public static UnitStatBlock For(UnitType type)
+    public static UnitStats For(UnitType type)
     {
         return type switch
         {
-            UnitType.Defender => new UnitStatBlock(
+            UnitType.Defender => new UnitStats(
                 maxHealth: 200,
                 armor: 0,
                 damage: 11,
@@ -85,7 +85,7 @@ readonly struct UnitStatBlock
                 moveSpeed: 3f,
                 color: new Color(0.1f, 0.3f, 0.85f),
                 autoAttack: true),
-            UnitType.Attacker => new UnitStatBlock(
+            UnitType.Attacker => new UnitStats(
                 maxHealth: 110,
                 armor: 0,
                 damage: 20,
@@ -93,7 +93,7 @@ readonly struct UnitStatBlock
                 moveSpeed: 5f,
                 color: new Color(0.2f, 0.5f, 1f),
                 autoAttack: true),
-            UnitType.Archer => new UnitStatBlock(
+            UnitType.Archer => new UnitStats(
                 maxHealth: 70,
                 armor: 0,
                 damage: 14,
@@ -101,7 +101,7 @@ readonly struct UnitStatBlock
                 moveSpeed: 4f,
                 color: new Color(0.3f, 0.85f, 1f),
                 autoAttack: true),
-            _ => new UnitStatBlock(100, 0, 10, 2f, 5f, Color.blue, true)
+            _ => new UnitStats(100, 0, 10, 2f, 5f, Color.blue, true)
         };
     }
 }

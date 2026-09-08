@@ -157,8 +157,8 @@ public class BattleManager : MonoBehaviour
 
         resultPanel.SetActive(false);
 
-        if (GetComponent<AbilityBarUI>() == null)
-            gameObject.AddComponent<AbilityBarUI>();
+        if (GetComponent<SquadCommandPanelUI>() == null)
+            gameObject.AddComponent<SquadCommandPanelUI>();
     }
 
     static void EnsureEventSystem()

@@ -43,6 +43,16 @@ public class PlayerUnitAI : MonoBehaviour
             return;
         }
 
+        if (unit != null &&
+            SquadCommandState.GetMode(unit.Type) == SquadCommandMode.Hold &&
+            !isHolding &&
+            attackTarget == null &&
+            (movement == null || !movement.IsFollowingPlayerMoveOrder))
+        {
+            HoldPosition();
+            return;
+        }
+
         if (isHolding)
         {
             autoTarget = null;
@@ -67,6 +77,12 @@ public class PlayerUnitAI : MonoBehaviour
                 RunCombatTick(attackTarget, useSurroundSlots: true);
                 return;
             }
+        }
+
+        if (unit != null && SquadCommandState.GetMode(unit.Type) == SquadCommandMode.Manual)
+        {
+            autoTarget = null;
+            return;
         }
 
         RunIdleAutoCombat();
@@ -104,6 +120,20 @@ public class PlayerUnitAI : MonoBehaviour
         isShieldWall = false;
         isHolding = false;
         SetDefenderBlock(false);
+    }
+
+    public void ResumeAutoBehavior()
+    {
+        isHolding = false;
+        isShieldWall = false;
+        autoTarget = null;
+        GetComponent<SquadAbility>()?.CancelShieldWall();
+        SetDefenderBlock(false);
+    }
+
+    public void EnterManualMode()
+    {
+        ResumeAutoBehavior();
     }
 
     public void MoveToPosition(Vector3 position)

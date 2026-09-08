@@ -1,22 +1,31 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    enum AbilityTargetingMode
+    public enum SquadTargetingMode
     {
         None,
+        Move,
+        Attack,
         Charge,
         Volley
     }
 
     readonly List<UnitSelection> selectedUnits = new List<UnitSelection>();
-    AbilityTargetingMode abilityTargetingMode = AbilityTargetingMode.None;
+    SquadTargetingMode targetingMode = SquadTargetingMode.None;
+    UnitType? targetingSquad;
 
     public IReadOnlyList<UnitSelection> SelectedUnits => selectedUnits;
-    public bool IsChargeTargetingPending => abilityTargetingMode == AbilityTargetingMode.Charge;
-    public bool IsVolleyTargetingPending => abilityTargetingMode == AbilityTargetingMode.Volley;
+    public SquadTargetingMode TargetingMode => targetingMode;
+    public UnitType? TargetingSquad => targetingSquad;
+    public bool IsTargetingPending => targetingMode != SquadTargetingMode.None;
+    public bool IsMoveTargetingPending => targetingMode == SquadTargetingMode.Move;
+    public bool IsAttackTargetingPending => targetingMode == SquadTargetingMode.Attack;
+    public bool IsChargeTargetingPending => targetingMode == SquadTargetingMode.Charge;
+    public bool IsVolleyTargetingPending => targetingMode == SquadTargetingMode.Volley;
 
     public IReadOnlyList<UnitType> SelectedSquads => GetSelectedSquadTypes();
 
@@ -24,42 +33,45 @@ public class PlayerController : MonoBehaviour
     {
         PruneDestroyedUnits();
 
+        if (Keyboard.current == null)
+            return;
+
+        if (Keyboard.current.hKey.wasPressedThisFrame)
+        {
+            CancelTargeting();
+            ActivateShieldWall();
+            return;
+        }
+
+        if (Keyboard.current.qKey.wasPressedThisFrame)
+        {
+            ActivateCharge();
+            return;
+        }
+
+        if (Keyboard.current.wKey.wasPressedThisFrame)
+            ActivateVolley();
+    }
+
+    void LateUpdate()
+    {
         if (Mouse.current == null || Camera.main == null)
             return;
 
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.hKey.wasPressedThisFrame)
-            {
-                CancelAbilityTargeting();
-                ActivateShieldWall();
-                return;
-            }
-
-            if (Keyboard.current.qKey.wasPressedThisFrame)
-            {
-                ActivateCharge();
-                return;
-            }
-
-            if (Keyboard.current.wKey.wasPressedThisFrame)
-            {
-                ActivateVolley();
-                return;
-            }
-        }
+        if (IsPointerOverUI())
+            return;
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            CancelAbilityTargeting();
+            CancelTargeting();
             DeselectAll();
             return;
         }
 
-        if (abilityTargetingMode != AbilityTargetingMode.None &&
+        if (targetingMode != SquadTargetingMode.None &&
             Mouse.current.leftButton.wasPressedThisFrame)
         {
-            TryExecutePendingAbilityClick();
+            TryExecutePendingTargetClick();
             return;
         }
 
@@ -76,7 +88,7 @@ public class PlayerController : MonoBehaviour
         UnitSelection clickedUnit = FindClosestPlayerUnit(hits);
         if (clickedUnit != null)
         {
-            CancelAbilityTargeting();
+            CancelTargeting();
             HandleUnitClick(clickedUnit);
             return;
         }
@@ -97,6 +109,122 @@ public class PlayerController : MonoBehaviour
         MoveSelectedUnitsTo(groundPoint);
     }
 
+    static bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null)
+            return false;
+
+        return EventSystem.current.IsPointerOverGameObject();
+    }
+
+    public void SelectSquad(UnitType type)
+    {
+        SelectSquadOnly(type);
+    }
+
+    public void SetSquadMode(UnitType type, SquadCommandMode mode)
+    {
+        SelectSquadOnly(type);
+        SquadCommandState.SetMode(type, mode);
+        AbilityFeedback.Show($"{GetSquadShortName(type)}: {GetModeLabel(mode)}", 2f);
+    }
+
+    public void BeginMoveTargeting(UnitType type)
+    {
+        SelectSquadOnly(type);
+        if (GetLivingPlayerUnitsOfType(type).Count == 0)
+        {
+            AbilityFeedback.Show($"{GetSquadShortName(type)} squad eliminated");
+            return;
+        }
+
+        if (targetingMode == SquadTargetingMode.Move && targetingSquad == type)
+        {
+            CancelTargeting();
+            AbilityFeedback.Show("Move cancelled");
+            return;
+        }
+
+        BeginTargeting(SquadTargetingMode.Move, type, "Click ground to move");
+    }
+
+    public void BeginAttackTargeting(UnitType type)
+    {
+        SelectSquadOnly(type);
+        if (GetLivingPlayerUnitsOfType(type).Count == 0)
+        {
+            AbilityFeedback.Show($"{GetSquadShortName(type)} squad eliminated");
+            return;
+        }
+
+        if (targetingMode == SquadTargetingMode.Attack && targetingSquad == type)
+        {
+            CancelTargeting();
+            AbilityFeedback.Show("Attack cancelled");
+            return;
+        }
+
+        BeginTargeting(SquadTargetingMode.Attack, type, "Click enemy to attack");
+    }
+
+    public void BeginChargeTargeting(UnitType type)
+    {
+        if (type != UnitType.Attacker)
+            return;
+
+        SelectSquadOnly(type);
+        if (GetLivingPlayerUnitsOfType(type).Count == 0)
+        {
+            AbilityFeedback.Show("Attackers eliminated");
+            return;
+        }
+
+        if (targetingMode == SquadTargetingMode.Charge && targetingSquad == type)
+        {
+            CancelTargeting();
+            AbilityFeedback.Show("Charge cancelled");
+            return;
+        }
+
+        BeginTargeting(SquadTargetingMode.Charge, type, "Click enemy or ground to charge");
+    }
+
+    public void BeginVolleyTargeting(UnitType type)
+    {
+        if (type != UnitType.Archer)
+            return;
+
+        SelectSquadOnly(type);
+        if (GetLivingPlayerUnitsOfType(type).Count == 0)
+        {
+            AbilityFeedback.Show("Archers eliminated");
+            return;
+        }
+
+        if (targetingMode == SquadTargetingMode.Volley && targetingSquad == type)
+        {
+            CancelTargeting();
+            AbilityFeedback.Show("Volley cancelled");
+            return;
+        }
+
+        BeginTargeting(SquadTargetingMode.Volley, type, "Click ground or enemy to volley");
+    }
+
+    public void ActivateShieldForSquad(UnitType type)
+    {
+        SelectSquadOnly(type);
+        ActivateShieldWall();
+    }
+
+    void BeginTargeting(SquadTargetingMode mode, UnitType squad, string message)
+    {
+        CancelTargeting();
+        targetingMode = mode;
+        targetingSquad = squad;
+        AbilityFeedback.Show(message, 4f);
+    }
+
     void ActivateShieldWall()
     {
         PruneDestroyedUnits();
@@ -109,6 +237,7 @@ public class PlayerController : MonoBehaviour
         int activated = 0;
         int held = 0;
         int onCooldown = 0;
+        HashSet<UnitType> affectedSquads = new HashSet<UnitType>();
 
         foreach (UnitSelection unit in selectedUnits)
         {
@@ -118,6 +247,8 @@ public class PlayerController : MonoBehaviour
             if (ability != null && ability.TryActivateShieldWall())
             {
                 activated++;
+                if (unitProfile != null)
+                    affectedSquads.Add(unitProfile.Type);
                 continue;
             }
 
@@ -133,15 +264,20 @@ public class PlayerController : MonoBehaviour
             {
                 ai.HoldPosition();
                 held++;
+                if (unitProfile != null)
+                    affectedSquads.Add(unitProfile.Type);
             }
         }
+
+        foreach (UnitType squadType in affectedSquads)
+            SquadCommandState.SetMode(squadType, SquadCommandMode.Hold);
 
         if (activated > 0)
             AbilityFeedback.Show("Shield Wall active");
         else if (onCooldown > 0)
             AbilityFeedback.Show("Shield Wall on cooldown");
         else if (held > 0)
-            AbilityFeedback.Show("Archers holding position");
+            AbilityFeedback.Show("Squads holding position");
     }
 
     void ActivateCharge()
@@ -159,19 +295,10 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (abilityTargetingMode == AbilityTargetingMode.Charge)
-        {
-            CancelAbilityTargeting();
-            AbilityFeedback.Show("Charge cancelled");
-            return;
-        }
-
-        CancelAbilityTargeting();
-        abilityTargetingMode = AbilityTargetingMode.Charge;
-        AbilityFeedback.Show("Click enemy or ground to charge", 4f);
+        BeginChargeTargeting(UnitType.Attacker);
     }
 
-    void TryExecutePendingAbilityClick()
+    void TryExecutePendingTargetClick()
     {
         Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
         RaycastHit[] hits = Physics.RaycastAll(ray);
@@ -180,39 +307,65 @@ public class PlayerController : MonoBehaviour
 
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-        if (abilityTargetingMode == AbilityTargetingMode.Charge)
+        switch (targetingMode)
         {
-            Health enemyTarget = FindClosestEnemy(hits);
-            if (enemyTarget != null)
+            case SquadTargetingMode.Move:
+                if (TryFindGroundPoint(hits, out Vector3 movePoint))
+                {
+                    MoveSelectedUnitsTo(movePoint);
+                    CancelTargeting();
+                }
+
+                return;
+
+            case SquadTargetingMode.Attack:
             {
-                ExecuteCharge(enemyTarget.transform.position, enemyTarget);
-                CancelAbilityTargeting();
+                Health attackTarget = FindClosestEnemy(hits);
+                if (attackTarget != null)
+                {
+                    AttackWithSelectedUnits(attackTarget);
+                    CancelTargeting();
+                }
+
                 return;
             }
 
-            if (TryFindGroundPoint(hits, out Vector3 groundPoint))
+            case SquadTargetingMode.Charge:
             {
-                ExecuteCharge(groundPoint, null);
-                CancelAbilityTargeting();
-            }
+                Health enemyTarget = FindClosestEnemy(hits);
+                if (enemyTarget != null)
+                {
+                    ExecuteCharge(enemyTarget.transform.position, enemyTarget);
+                    CancelTargeting();
+                    return;
+                }
 
-            return;
-        }
+                if (TryFindGroundPoint(hits, out Vector3 chargePoint))
+                {
+                    ExecuteCharge(chargePoint, null);
+                    CancelTargeting();
+                }
 
-        if (abilityTargetingMode == AbilityTargetingMode.Volley)
-        {
-            Health enemyTarget = FindClosestEnemy(hits);
-            if (enemyTarget != null)
-            {
-                ExecuteVolley(enemyTarget.transform.position);
-                CancelAbilityTargeting();
                 return;
             }
 
-            if (TryFindGroundPoint(hits, out Vector3 groundPoint))
+            case SquadTargetingMode.Volley:
             {
-                ExecuteVolley(groundPoint);
-                CancelAbilityTargeting();
+                Health volleyTarget = FindClosestEnemy(hits);
+                if (volleyTarget != null)
+                {
+                    ExecuteVolley(volleyTarget.transform.position);
+                    CancelTargeting();
+                    return;
+                }
+
+                if (TryFindGroundPoint(hits, out Vector3 volleyPoint))
+                {
+                    ExecuteVolley(volleyPoint);
+                    CancelTargeting();
+                }
+
+                return;
             }
         }
     }
@@ -245,9 +398,10 @@ public class PlayerController : MonoBehaviour
             AbilityFeedback.Show("Charge on cooldown");
     }
 
-    void CancelAbilityTargeting()
+    public void CancelTargeting()
     {
-        abilityTargetingMode = AbilityTargetingMode.None;
+        targetingMode = SquadTargetingMode.None;
+        targetingSquad = null;
     }
 
     bool HasSelectedAttackers()
@@ -277,16 +431,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (abilityTargetingMode == AbilityTargetingMode.Volley)
-        {
-            CancelAbilityTargeting();
-            AbilityFeedback.Show("Volley cancelled");
-            return;
-        }
-
-        CancelAbilityTargeting();
-        abilityTargetingMode = AbilityTargetingMode.Volley;
-        AbilityFeedback.Show("Click ground or enemy to volley", 4f);
+        BeginVolleyTargeting(UnitType.Archer);
     }
 
     void ExecuteVolley(Vector3 volleyCenter)
@@ -612,12 +757,33 @@ public class PlayerController : MonoBehaviour
 
     void DeselectAll()
     {
-        CancelAbilityTargeting();
+        CancelTargeting();
         PruneDestroyedUnits();
 
         foreach (UnitSelection unit in selectedUnits)
             unit.Deselect();
 
         selectedUnits.Clear();
+    }
+
+    static string GetSquadShortName(UnitType type)
+    {
+        return type switch
+        {
+            UnitType.Defender => "DEF",
+            UnitType.Attacker => "ATK",
+            UnitType.Archer => "ARC",
+            _ => type.ToString().ToUpper()
+        };
+    }
+
+    static string GetModeLabel(SquadCommandMode mode)
+    {
+        return mode switch
+        {
+            SquadCommandMode.Hold => "Hold",
+            SquadCommandMode.Manual => "Manual",
+            _ => "Auto"
+        };
     }
 }

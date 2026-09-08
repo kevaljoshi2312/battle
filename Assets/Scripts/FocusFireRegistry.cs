@@ -44,6 +44,16 @@ public static class FocusFireRegistry
         RefreshHighlights();
     }
 
+    public static Health GetFocus(UnitType squadType)
+    {
+        PruneDeadTargets();
+
+        if (!squadTargets.TryGetValue(squadType, out Health target))
+            return null;
+
+        return target != null && target.IsAlive ? target : null;
+    }
+
     public static string GetSummary()
     {
         PruneDeadTargets();

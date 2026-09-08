@@ -180,29 +180,32 @@ public static class BattleSetupShared
 
         for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyFrontCount; i++)
         {
-            CreateEnemy(
+            CreateEnemyOfType(
                 $"Enemy_Def_{i + 1}",
                 FormationPosition(i, BattlefieldLayout.OpenFieldEnemyFrontCount, BattlefieldLayout.OpenFieldEnemyDefenderZ),
                 displayId++,
-                maxHealth: 80,
+                UnitType.Defender,
                 faceTowardZ: BattlefieldLayout.OpenFieldPlayerDefenderZ);
         }
 
         for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyMidCount; i++)
         {
-            CreateEnemy(
+            CreateEnemyOfType(
                 $"Enemy_Atk_{i + 1}",
                 FormationPosition(i, BattlefieldLayout.OpenFieldEnemyMidCount, BattlefieldLayout.OpenFieldEnemyAttackerZ),
                 displayId++,
+                UnitType.Attacker,
                 faceTowardZ: BattlefieldLayout.OpenFieldPlayerDefenderZ);
         }
 
         for (int i = 0; i < BattlefieldLayout.OpenFieldEnemyBackCount; i++)
         {
-            CreateEnemyRanged(
+            CreateEnemyOfType(
                 $"Enemy_Arc_{i + 1}",
                 FormationPosition(i, BattlefieldLayout.OpenFieldEnemyBackCount, BattlefieldLayout.OpenFieldEnemyArcherZ),
-                displayId++);
+                displayId++,
+                UnitType.Archer,
+                faceTowardZ: BattlefieldLayout.OpenFieldPlayerDefenderZ);
         }
     }
 
@@ -327,6 +330,50 @@ public static class BattleSetupShared
         EditorUtility.SetDirty(unitProfile);
     }
 
+    static void CreateEnemyOfType(
+        string name,
+        Vector3 position,
+        int displayId,
+        UnitType unitType,
+        float faceTowardZ = float.NaN)
+    {
+        UnitStats stats = UnitStats.For(unitType);
+        bool isRanged = UnitVisuals.IsRangedAttack(stats.AttackRange);
+        Color bodyColor = isRanged
+            ? new Color(0.95f, 0.35f, 0.35f)
+            : new Color(0.9f, 0.2f, 0.2f);
+
+        GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        enemy.name = name;
+        enemy.transform.position = position;
+        enemy.transform.localScale = UnitVisuals.CapsuleScale;
+
+        Renderer renderer = enemy.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.color = bodyColor;
+            renderer.sharedMaterial = material;
+        }
+
+        EnsureTeam(enemy, Team.Enemy);
+        UnitFacing.EnsureNose(enemy, Team.Enemy);
+        EnsureHealth(enemy, stats.MaxHealth, stats.Armor);
+        EnsureCombat(enemy, stats.Damage, stats.AttackRange, stats.AutoAttack);
+        EnsureUnitIdentity(enemy, Team.Enemy, displayId);
+        EnsureHealthBar(enemy);
+        EnsureUnitWorldLabel(enemy);
+        EnsureDamageFlash(enemy);
+        EnsureDeathEffect(enemy);
+
+        UnitMovement movement = enemy.AddComponent<UnitMovement>();
+        movement.Configure(stats.MoveSpeed * UnitVisuals.MoveSpeedScale);
+        enemy.AddComponent<EnemyAI>();
+        EnsureUnitFacing(enemy);
+        float targetZ = float.IsNaN(faceTowardZ) ? BattlefieldLayout.PlayerBackZ : faceTowardZ;
+        SnapFacingToward(enemy, new Vector3(enemy.transform.position.x, 0f, targetZ));
+    }
+
     static void CreateEnemy(string name, Vector3 position, int displayId, int maxHealth = 70, float faceTowardZ = float.NaN)
     {
         GameObject enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -443,13 +490,13 @@ public static class BattleSetupShared
         unitTeam.SetTeam(team);
     }
 
-    static void EnsureHealth(GameObject unit, int maxHealth)
+    static void EnsureHealth(GameObject unit, int maxHealth, int armor = 0)
     {
         Health health = unit.GetComponent<Health>();
         if (health == null)
             health = unit.AddComponent<Health>();
 
-        health.Configure(maxHealth);
+        health.Configure(maxHealth, armor);
         EditorUtility.SetDirty(health);
     }
 
